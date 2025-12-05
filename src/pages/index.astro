@@ -1,11 +1,78 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+const PAGE_TITLE = 'LostNet Dashboard';
 ---
 
-<Layout>
-	<Welcome />
+
+<Layout title={PAGE_TITLE}>
+<header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 shadow-sm z-20">
+<div class="flex items-center gap-3">
+<div class="bg-blue-600 text-white p-2 rounded-lg">📡</div>
+<h1 class="font-bold text-gray-800 text-lg tracking-tight">LostNet <span class="text-blue-600">Monitor</span></h1>
+</div>
+
+
+<div class="flex items-center gap-3">
+<div id="status-indicator" class="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-full text-xs font-medium text-gray-500">
+<span class="w-2 h-2 rounded-full bg-gray-400"></span> Desconectado
+</div>
+</div>
+</header>
+
+
+<div class="flex flex-1 overflow-hidden min-h-[calc(100vh-4rem)]">
+<aside class="w-80 bg-white border-r border-gray-200 flex flex-col z-20 shadow-lg">
+<div class="p-5 border-b border-gray-100">
+<h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Controles de Mapa</h2>
+<div class="space-y-3">
+<button id="btn-gps" class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2.5 px-4 rounded-lg text-sm font-medium transition-colors shadow-sm focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">📍 Ubicarme</button>
+<button id="btn-refresh" class="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2.5 px-4 rounded-lg text-sm font-medium transition-colors">🔄 Actualizar Datos</button>
+</div>
+</div>
+
+
+<div class="p-5 flex-1 overflow-y-auto">
+<h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Resumen de Área</h2>
+<div class="grid grid-cols-2 gap-3 mb-6">
+<div class="bg-slate-50 p-3 rounded-lg border border-slate-100 text-center">
+<span id="stat-reportes" class="block text-2xl font-bold text-slate-700">--</span>
+<span class="text-xs text-slate-500">Reportes</span>
+</div>
+<div class="bg-green-50 p-3 rounded-lg border border-green-100 text-center">
+<span id="stat-seguros" class="block text-2xl font-bold text-green-700">--</span>
+<span class="text-xs text-green-600">Puntos Seguros</span>
+</div>
+</div>
+
+
+<h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Alertas de Proximidad</h2>
+<div id="alerts-container" class="space-y-2">
+<p class="text-xs text-gray-400 italic text-center py-4">Esperando ubicación...</p>
+</div>
+</div>
+
+
+<div class="p-4 border-t border-gray-100 text-xs text-center text-gray-400">LostNet Client v1.0.0</div>
+</aside>
+
+
+<main class="flex-1 relative bg-slate-200">
+<div id="map" class="w-full h-full"></div>
+
+
+<div class="absolute bottom-6 right-6 bg-white/95 backdrop-blur rounded-lg shadow-lg p-4 z-[400] text-xs border border-gray-100">
+<h3 class="font-bold text-gray-600 mb-2">Simbología</h3>
+<div class="flex items-center gap-2 mb-1.5"><span class="w-3 h-3 rounded-full bg-blue-500"></span> Tu Ubicación</div>
+<div class="flex items-center gap-2 mb-1.5"><span class="w-3 h-3 rounded-full bg-red-500"></span> Objeto Perdido</div>
+<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-green-500"></span> Zona Segura</div>
+</div>
+</main>
+</div>
+
+
+<!-- Cargar el bundle del cliente (se ejecuta en navegador) -->
+<script>
+  import "../scripts/app.js";
+</script>
 </Layout>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
