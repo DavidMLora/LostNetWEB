@@ -12,6 +12,7 @@
     "@tailwindcss/vite": "^4.1.17",
     "astro": "^5.16.4",
     "leaflet": "^1.9.4",
+    "leaflet-routing-machine": "^3.2.12",
     "tailwindcss": "^4.1.17"
   }
 }
