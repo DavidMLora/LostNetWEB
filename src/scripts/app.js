@@ -20,13 +20,13 @@ L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
 const CONFIG = {
   // TU SERVIDOR LOCAL
   API_BASE_URL: import.meta.env.PUBLIC_API_URL || 'http://10.155.13.137:5000',
-  GOOGLE_CLIENT_ID: 'TU_CLIENT_ID_DE_GOOGLE.apps.googleusercontent.com', 
+  GOOGLE_CLIENT_ID: 'http://131580325520-73jrf8i9o54nhitc64etc4ppk41qkin4.apps.googleusercontent.com/', 
   DEFAULT_COORDS: [21.88, -102.29], // Aguascalientes Centro
   DEFAULT_ZOOM: 13,
   GPS_ZOOM: 16,
   ROUTES: {
     LOGIN: '/',
-    DASHBOARD: '/monitor'
+    DASHBOARD: '/dashboard.astro'
   },
   ENDPOINTS: {
     REPORTES: '/reportes',
