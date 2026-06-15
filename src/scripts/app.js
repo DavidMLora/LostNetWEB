@@ -1,6 +1,6 @@
 /**
  * LOSTNET CLIENT APP
- * Versión: FINAL v8.3 (refactor menor + toasts + 2.5km)
+ * Versión: FINAL v8.4 (Conectado al Servidor Principal por VPN)
  */
 
 import L from 'leaflet';
@@ -17,7 +17,9 @@ L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
 const NEARBY_RADIUS_METERS = 2500;
 
 const CONFIG = {
-  API_BASE_URL: import.meta.env.PUBLIC_API_URL || 'http://10.155.13.137:5000',
+  // --- RUTAS DE LA VPN AL SERVIDOR PRINCIPAL ---
+  SERVER_URL: 'http://10.155.13.62:5000',
+  API_BASE_URL: 'http://10.155.13.62:5000/api',
 
   GOOGLE_CLIENT_ID: '131580325520-73jrf8i9o54nhitc64etc4ppk41qkin4.apps.googleusercontent.com',
   DEFAULT_COORDS: [21.88, -102.29],
@@ -300,7 +302,9 @@ class ApiService {
   }
 
   resolveUrl(path) {
-    return path && !path.startsWith('http') ? `${this.baseUrl}${path}` : path;
+    // Si la ruta ya incluye http, la respeta. Si no, usa el SERVER_URL (no el API_BASE_URL)
+    // para que las fotos carguen correctamente desde http://10.155.13.62:5000/photos/...
+    return path && !path.startsWith('http') ? `${CONFIG.SERVER_URL}${path}` : path;
   }
 
   fetchContacto(ownerId) {
@@ -752,7 +756,7 @@ class MapController {
 // ---------- CORE MAIN ----------
 
 const initApp = async () => {
-  console.log('🚀 LostNet Client Loaded (v8.3)');
+  console.log('🚀 LostNet Client Loaded (v8.4 - Conectado a VPN Principal)');
   injectCustomStyles();
 
   const currentUser = SessionManager.guard();
