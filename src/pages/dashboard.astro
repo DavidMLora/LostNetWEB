@@ -13,12 +13,10 @@ const PAGE_TITLE = 'LostNet Dashboard';
     
     <div class="flex items-center gap-2">
       <div class="bg-blue-600 rounded-lg p-1.5 shadow-sm flex items-center justify-center">
-  <img src="/favicon.jpg"
-       alt="LostNet Logo"
-       class="w-7 h-7 object-cover rounded-full border border-white shadow-sm" />
-</div>
-
-
+        <img src="/favicon.jpg"
+             alt="LostNet Logo"
+             class="w-7 h-7 object-cover rounded-full border border-white shadow-sm" />
+      </div>
       <h1 class="font-bold text-gray-800 text-lg tracking-tight hidden sm:block">LostNet <span class="text-blue-600">Monitor</span></h1>
     </div>
   </div>
@@ -41,19 +39,26 @@ const PAGE_TITLE = 'LostNet Dashboard';
         </div>
     </div>
 
+    <!-- Badge de rol del usuario (MongoDB) -->
+    <div class="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+      <span id="user-role-icon" class="text-sm">👤</span>
+      <div class="flex flex-col leading-none">
+        <span class="text-[9px] text-gray-400 uppercase font-bold">Rango</span>
+        <span id="user-badge" class="text-xs font-bold text-blue-600">...</span>
+      </div>
+    </div>
+
     <div class="h-6 w-px bg-gray-300 mx-1"></div>
 
     <!-- Botón Cerrar Sesión -->
     <button
-  id="btn-logout"
-  class="text-gray-600 hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2 text-sm font-semibold"
-  title="Cerrar Sesión"
->
-  <i class="fa-solid fa-right-from-bracket"></i>
-  <span>Salir</span>
-</button>
-
-
+      id="btn-logout"
+      class="text-gray-600 hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2 text-sm font-semibold"
+      title="Cerrar Sesión"
+    >
+      <i class="fa-solid fa-right-from-bracket"></i>
+      <span>Salir</span>
+    </button>
 
   </div>
 </header>
@@ -164,7 +169,7 @@ const PAGE_TITLE = 'LostNet Dashboard';
   <!-- MAPA -->
   <div id="map" class="w-full h-full z-0"></div>
 
-  <!-- 2. PANEL LATERAL DERECHO (NOTIFICACIONES - RESTAURADO) -->
+  <!-- 2. PANEL LATERAL DERECHO (NOTIFICACIONES) -->
   <aside id="notifications-menu" class="absolute top-0 right-0 w-full sm:w-80 h-full bg-white/95 backdrop-blur-sm border-l border-gray-200 flex flex-col z-30 shadow-2xl transition-transform duration-300 ease-in-out translate-x-full">
     <!-- Header del Panel -->
     <div class="p-4 border-b border-yellow-100 bg-yellow-50 shrink-0 flex justify-between items-center shadow-sm">
@@ -188,7 +193,7 @@ const PAGE_TITLE = 'LostNet Dashboard';
     </div>
   </aside>
 
-  <!-- BOTONES FLOTANTES (Sin notificaciones flotantes) -->
+  <!-- BOTONES FLOTANTES -->
   <div class="absolute bottom-36 right-4 z-[20] flex flex-col gap-3 items-end pointer-events-none">
     <div class="pointer-events-auto flex flex-col gap-3 items-end">
       <!-- Botón Agregar Reporte -->
@@ -297,13 +302,7 @@ const PAGE_TITLE = 'LostNet Dashboard';
 <!-- MODAL VISTA DETALLADA -->
 <div id="view-modal" class="fixed inset-0 z-[2000] bg-black/50 hidden flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
   <div class="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden relative">
-      
-      <!-- Contenido se llenará con JS -->
-      <div id="view-modal-content" class="overflow-y-auto custom-scrollbar flex-1 pb-4">
-        <!-- Template (JS lo reemplazará) -->
-      </div>
-      
-      <!-- Botón cerrar -->
+      <div id="view-modal-content" class="overflow-y-auto custom-scrollbar flex-1 pb-4"></div>
       <button id="btn-close-view" class="absolute top-4 right-4 bg-black/30 hover:bg-black/50 text-white rounded-full p-2 backdrop-blur-sm transition-colors z-10 w-8 h-8 flex items-center justify-center">
           ✕
       </button>
@@ -328,6 +327,5 @@ const PAGE_TITLE = 'LostNet Dashboard';
   .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
   .custom-scrollbar { scrollbar-width: thin; scrollbar-color: #cbd5e1 #f8fafc; }
 </style>
-<!-- TOAST GLOBAL -->
 
 </Layout>
