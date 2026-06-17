@@ -354,6 +354,26 @@ const ViewModal = {
     const user = SessionManager.getUser();
     const catLabel = normalizeCategory(report.category);
 
+    // ── Badge PERDIDO / ENCONTRADO ──
+    const isFound = report.status === 'FOUND';
+    const statusDotColor = isFound ? '#22c55e' : '#ef4444';
+    const statusLabel = isFound ? 'ENCONTRADO' : 'PERDIDO';
+    const statusTextColor = isFound ? '#16a34a' : '#dc2626';
+    const statusBg = isFound ? '#f0fdf4' : '#fef2f2';
+    const statusBorder = isFound ? '#bbf7d0' : '#fecaca';
+
+    // ── Rol del usuario desde MongoDB ──
+    let rolUsuario = '...';
+    let rolIcon = '👤';
+    try {
+      const perfil = await this.api.get(CONFIG.ENDPOINTS.PERFIL, { email: report.email }).catch(() => null);
+      if (perfil?.rol) {
+        rolUsuario = perfil.rol;
+        const iconMap = { 'SABUESO': '🐕', 'PERDEDOR': '😅', 'BUSCADOR': '🔍' };
+        rolIcon = iconMap[perfil.rol] || '👤';
+      }
+    } catch { /* noop */ }
+
     this.content.innerHTML = `
       <div class="relative w-full h-64 bg-gray-100 group">
         ${imgUrl
@@ -361,7 +381,14 @@ const ViewModal = {
           : `<div class="flex items-center justify-center h-full text-4xl text-gray-300">📦</div>`
         }
         <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 pt-12">
-          <span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded uppercase font-bold shadow-sm">${catLabel}</span>
+          <!-- Badge estado dinámico + categoría -->
+          <div class="flex items-center gap-2 mb-1">
+            <div style="background:${statusBg};border:1px solid ${statusBorder};border-radius:9999px;padding:2px 8px;display:flex;align-items:center;gap:5px;">
+              <span style="width:8px;height:8px;border-radius:50%;background:${statusDotColor};display:inline-block;"></span>
+              <span style="font-size:10px;font-weight:700;color:${statusTextColor};">${statusLabel}</span>
+            </div>
+            <span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded uppercase font-bold shadow-sm">${catLabel}</span>
+          </div>
           <h2 class="text-white font-bold text-xl mt-1 shadow-sm leading-tight">${displayDesc}</h2>
         </div>
       </div>
@@ -370,9 +397,15 @@ const ViewModal = {
         <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm shadow-sm">
           <div class="flex items-center gap-2 mb-2">
             <span class="text-lg">👤</span>
-            <div>
+            <div class="flex-1">
               <p class="font-bold text-gray-700 text-xs uppercase">Publicado por</p>
-              <p class="text-gray-600">${report.email ? maskEmail(report.email) : 'Anónimo'}</p>
+              <!-- Correo + Rol del usuario desde MongoDB -->
+              <div class="flex items-center gap-2 flex-wrap mt-0.5">
+                <p class="text-gray-600">${report.email ? maskEmail(report.email) : 'Anónimo'}</p>
+                <span class="flex items-center gap-1 bg-blue-50 text-blue-600 border border-blue-100 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  ${rolIcon} ${rolUsuario}
+                </span>
+              </div>
             </div>
           </div>
           ${report.security_question && report.security_question !== 'N/A'
@@ -979,6 +1012,26 @@ const initApp = async () => {
 
   ui.btnCloseModal?.addEventListener('click', () => ui.modal?.classList.add('hidden'));
 
+  // ── TOGGLE "YO ENCONTRÉ ESTE OBJETO" → cambia preview dinámico ──────────
+  document.addEventListener('change', (e) => {
+    if (e.target.id !== 'toggle-found') return;
+    const dot = $('status-preview-dot');
+    const text = $('status-preview-text');
+    const preview = $('status-preview');
+    if (!dot || !text || !preview) return;
+    if (e.target.checked) {
+      dot.className = 'w-2.5 h-2.5 rounded-full bg-green-500';
+      text.className = 'text-xs font-bold text-green-600';
+      text.textContent = 'ENCONTRADO — se publicará como objeto recuperado 🎉';
+      preview.className = 'mt-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200 transition-all duration-300';
+    } else {
+      dot.className = 'w-2.5 h-2.5 rounded-full bg-red-500';
+      text.className = 'text-xs font-bold text-red-600';
+      text.textContent = 'PERDIDO — se publicará como objeto extraviado';
+      preview.className = 'mt-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200 transition-all duration-300';
+    }
+  });
+
   if (ui.inputPhoto) {
     ui.inputPhoto.onchange = (e) => {
       const file = e.target.files[0];
@@ -1022,8 +1075,10 @@ const initApp = async () => {
       fd.append('latitude', ui.inputLat?.value || '0');
       fd.append('longitude', ui.inputLon?.value || '0');
 
-      // Status siempre LOST al crear
-      fd.append('status', 'LOST');
+      // Status según el switch "Yo encontré este objeto"
+      const toggleFound = $('toggle-found');
+      const statusValue = toggleFound?.checked ? 'FOUND' : 'LOST';
+      fd.append('status', statusValue);
       fd.append('timestamp', Math.floor(Date.now() / 1000).toString());
 
       // Foto (opcional) — el backend la guarda en /photos/

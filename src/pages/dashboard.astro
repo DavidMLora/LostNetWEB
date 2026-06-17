@@ -291,6 +291,31 @@ const PAGE_TITLE = 'LostNet Dashboard';
 
       <input type="hidden" name="lat" id="input-lat">
       <input type="hidden" name="lon" id="input-lon">
+
+      <!-- SWITCH YO ENCONTRÉ ESTE OBJETO -->
+      <div class="pt-2 border-t border-gray-100">
+        <label class="flex items-center justify-between cursor-pointer bg-green-50 hover:bg-green-100 transition-colors p-3 rounded-xl border border-green-200">
+          <div class="flex items-center gap-2">
+            <span class="text-lg"></span>
+            <div>
+              <p class="text-sm font-bold text-green-700">¡Yo encontré este objeto!</p>
+              <p class="text-[10px] text-green-600">Activa si ya fue recuperado</p>
+            </div>
+          </div>
+          <!-- Toggle switch -->
+          <div class="relative">
+            <input type="checkbox" id="toggle-found" class="sr-only peer">
+            <div class="w-11 h-6 bg-gray-300 peer-checked:bg-green-500 rounded-full transition-colors duration-300 peer-focus:ring-2 peer-focus:ring-green-400"></div>
+            <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 peer-checked:translate-x-5"></div>
+          </div>
+        </label>
+
+        <!-- Preview dinámico del estado -->
+        <div id="status-preview" class="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200 transition-all duration-300">
+          <span id="status-preview-dot" class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+          <span id="status-preview-text" class="text-xs font-bold text-red-600">PERDIDO — se publicará como objeto extraviado</span>
+        </div>
+      </div>
       
       <button type="submit" id="btn-submit-report" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-md transition-transform active:scale-95">
         Publicar Reporte
