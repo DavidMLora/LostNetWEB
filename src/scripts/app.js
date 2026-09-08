@@ -18,8 +18,8 @@ const NEARBY_RADIUS_METERS = 2500;
 
 const CONFIG = {
   // --- RUTAS DE LA VPN AL SERVIDOR PRINCIPAL ---
-  SERVER_URL: 'http://10.155.13.62:5000',
-  API_BASE_URL: 'http://10.155.13.62:5000/api',
+  SERVER_URL: 'http://10.147.20.62:5000',
+  API_BASE_URL: 'http://10.147.20.62:5000/api',
 
   GOOGLE_CLIENT_ID: '131580325520-73jrf8i9o54nhitc64etc4ppk41qkin4.apps.googleusercontent.com',
   DEFAULT_COORDS: [21.88, -102.29],
@@ -87,7 +87,7 @@ const getDistanceInMeters = (lat1, lon1, lat2, lon2) => {
   const a =
     Math.sin(deltaPhi / 2) ** 2 +
     Math.cos(phi1) * Math.cos(phi2) *
-      Math.sin(deltaLambda / 2) ** 2;
+    Math.sin(deltaLambda / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 };
@@ -181,7 +181,7 @@ const SessionManager = {
     if (jsonUser) {
       try {
         return JSON.parse(jsonUser);
-      } catch (e) {}
+      } catch (e) { }
     }
     const email = localStorage.getItem('user_email');
     if (email) {
@@ -334,15 +334,13 @@ const ViewModal = {
 
     this.content.innerHTML = `
       <div class="relative w-full h-64 bg-gray-100 group">
-        ${
-          imgUrl
-            ? `<img src="${imgUrl}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">`
-            : `<div class="flex items-center justify-center h-full text-4xl text-gray-300">📦</div>`
-        }
+        ${imgUrl
+        ? `<img src="${imgUrl}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">`
+        : `<div class="flex items-center justify-center h-full text-4xl text-gray-300">📦</div>`
+      }
         <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 pt-12">
-          <span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded uppercase font-bold shadow-sm">${
-            report.category || 'Otros'
-          }</span>
+          <span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded uppercase font-bold shadow-sm">${report.category || 'Otros'
+      }</span>
           <h2 class="text-white font-bold text-xl mt-1 shadow-sm leading-tight">${displayDesc}</h2>
         </div>
       </div>
@@ -353,36 +351,32 @@ const ViewModal = {
             <span class="text-lg">👤</span>
             <div>
               <p class="font-bold text-gray-700 text-xs uppercase">Publicado por</p>
-              <p class="text-gray-600">${
-                report.user_id
-                  ? report.email
-                    ? maskEmail(report.email)
-                    : 'Usuario'
-                  : 'Anónimo'
-              }</p>
+              <p class="text-gray-600">${report.user_id
+        ? report.email
+          ? maskEmail(report.email)
+          : 'Usuario'
+        : 'Anónimo'
+      }</p>
             </div>
           </div>
           
-          ${
-            report.security_question && report.security_question !== 'N/A'
-              ? `<div class="mt-3 pt-3 border-t border-slate-200">
+          ${report.security_question && report.security_question !== 'N/A'
+        ? `<div class="mt-3 pt-3 border-t border-slate-200">
                    <div class="flex items-start gap-2">
                       <span class="text-lg">🔒</span>
                       <div>
                           <p class="text-xs text-orange-600 font-bold uppercase">Pregunta de Seguridad</p>
-                          <p class="text-gray-700 italic text-sm mt-0.5">"${
-                            report.security_question
-                          }"</p>
+                          <p class="text-gray-700 italic text-sm mt-0.5">"${report.security_question
+        }"</p>
                       </div>
                    </div>
                  </div>`
-              : ''
-          }
+        : ''
+      }
         </div>
 
-        ${
-          report.phone && String(report.phone).trim() !== ''
-            ? `
+        ${report.phone && String(report.phone).trim() !== ''
+        ? `
           <button id="btn-whatsapp-action" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-xl shadow-md flex items-center justify-center gap-2 transition-transform active:scale-95">
               <span class="text-2xl">💬</span> 
               <div class="text-left leading-tight">
@@ -391,8 +385,8 @@ const ViewModal = {
               </div>
           </button>
         `
-            : `<div class="text-center text-xs text-gray-400 bg-gray-50 p-3 rounded-lg border border-dashed border-gray-200">Este reporte no tiene teléfono de contacto público.</div>`
-        }
+        : `<div class="text-center text-xs text-gray-400 bg-gray-50 p-3 rounded-lg border border-dashed border-gray-200">Este reporte no tiene teléfono de contacto público.</div>`
+      }
         
         <hr class="border-gray-100">
 
@@ -488,9 +482,8 @@ const ViewModal = {
     if (list.querySelector('.flex-col')) list.innerHTML = '';
 
     const div = document.createElement('div');
-    div.className = `bg-white p-3 rounded-lg shadow-sm border border-gray-100 text-sm mb-2 last:mb-0 ${
-      isNew ? 'animate-pulse bg-blue-50 border-blue-100' : ''
-    }`;
+    div.className = `bg-white p-3 rounded-lg shadow-sm border border-gray-100 text-sm mb-2 last:mb-0 ${isNew ? 'animate-pulse bg-blue-50 border-blue-100' : ''
+      }`;
 
     const dateStr = c.timestamp
       ? new Date(c.timestamp * 1000).toLocaleDateString()
@@ -498,9 +491,8 @@ const ViewModal = {
 
     div.innerHTML = `
       <div class="flex justify-between items-center mb-1">
-          <span class="font-bold text-gray-800 text-xs bg-gray-100 px-1.5 py-0.5 rounded">${
-            c.user_name || 'Anónimo'
-          }</span>
+          <span class="font-bold text-gray-800 text-xs bg-gray-100 px-1.5 py-0.5 rounded">${c.user_name || 'Anónimo'
+      }</span>
           <span class="text-[10px] text-gray-400">${dateStr}</span>
       </div>
       <p class="text-gray-600 leading-snug pl-1">${c.text}</p>
@@ -625,9 +617,8 @@ class MapController {
           draggable: false,
           icon: L.divIcon({
             className: 'route-marker',
-            html: `<div style="width: 12px; height: 12px; background: ${
-              i === 0 ? '#3B82F6' : '#8B5CF6'
-            }; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5);"></div>`
+            html: `<div style="width: 12px; height: 12px; background: ${i === 0 ? '#3B82F6' : '#8B5CF6'
+              }; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5);"></div>`
           })
         });
       }
@@ -708,19 +699,17 @@ class MapController {
             <h3 class="font-bold text-base" style="color:${color}">${title}</h3>
             ${categoryBadge}
         </div>
-        ${
-          isSafePoint
-            ? `<p class="font-semibold text-gray-800 text-sm">${data.nombre}</p><p class="text-xs text-gray-500">${data.horario || ''}</p>`
-            : `<p class="text-sm text-gray-800 mb-2 truncate">${displayDesc.substring(
-                0,
-                40
-              )}...</p>`
-        }
-        ${
-          options.imageUrl
-            ? `<div class="relative group cursor-pointer mb-2"><img id="${imgId}" src="${options.imageUrl}" class="w-full h-24 object-cover rounded border border-gray-100"></div>`
-            : ''
-        }
+        ${isSafePoint
+        ? `<p class="font-semibold text-gray-800 text-sm">${data.nombre}</p><p class="text-xs text-gray-500">${data.horario || ''}</p>`
+        : `<p class="text-sm text-gray-800 mb-2 truncate">${displayDesc.substring(
+          0,
+          40
+        )}...</p>`
+      }
+        ${options.imageUrl
+        ? `<div class="relative group cursor-pointer mb-2"><img id="${imgId}" src="${options.imageUrl}" class="w-full h-24 object-cover rounded border border-gray-100"></div>`
+        : ''
+      }
         ${buttons.html}
       </div>`;
 
@@ -923,21 +912,19 @@ const initApp = async () => {
 
         card.innerHTML = `
           <div class="w-12 h-12 bg-gray-100 rounded-md overflow-hidden flex-shrink-0 flex items-center justify-center bg-slate-50">
-              ${
-                imgUrl
-                  ? `<img src="${imgUrl}" class="w-full h-full object-cover">`
-                  : `<span class="text-xl">📦</span>`
-              }
+              ${imgUrl
+            ? `<img src="${imgUrl}" class="w-full h-full object-cover">`
+            : `<span class="text-xl">📦</span>`
+          }
           </div>
           <div class="flex-1 min-w-0 pr-6">
               <h4 class="text-sm font-bold text-gray-700 truncate">${displayTitle}</h4>
               <div class="flex items-center justify-between mt-1">
                   <span class="text-[10px] bg-blue-50 text-blue-600 px-1.5 rounded border border-blue-100">${rCat}</span>
-                  <span class="text-[10px] text-gray-400">${
-                    r.timestamp
-                      ? new Date(r.timestamp * 1000).toLocaleDateString()
-                      : ''
-                  }</span>
+                  <span class="text-[10px] text-gray-400">${r.timestamp
+            ? new Date(r.timestamp * 1000).toLocaleDateString()
+            : ''
+          }</span>
               </div>
           </div>
           ${deleteBtnHtml}`;
@@ -1001,10 +988,10 @@ const initApp = async () => {
         reportsRes.status === 'fulfilled' ? reportsRes.value : [];
       state.allReports = Array.isArray(rawReports)
         ? rawReports.map((r) => ({
-            ...r,
-            security_answer: undefined,
-            email: maskEmail(r.email)
-          }))
+          ...r,
+          security_answer: undefined,
+          email: maskEmail(r.email)
+        }))
         : [];
       state.allSafePoints =
         safesRes.status === 'fulfilled' ? safesRes.value : [];
@@ -1228,11 +1215,11 @@ const initApp = async () => {
           <div class="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-500">📦</div>
           <div class="flex-1 min-w-0">
               <p class="text-sm font-bold text-gray-700 truncate">${getReportTitle(
-                r
-              )}</p>
+        r
+      )}</p>
               <p class="text-[10px] text-blue-500 font-medium">${Math.round(
-                dist
-              )} m</p>
+        dist
+      )} m</p>
           </div>
           <div class="text-gray-300">›</div>
         `;
