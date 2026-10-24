@@ -18,8 +18,8 @@ const NEARBY_RADIUS_METERS = 2500;
 
 const CONFIG = {
   // --- RUTAS DE LA VPN AL SERVIDOR PRINCIPAL ---
-  SERVER_URL: 'http://10.147.20.62:5000',
-  API_BASE_URL: 'http://10.147.20.62:5000/api',
+  SERVER_URL: 'https://lostnet-api.tail0e8b19.ts.net',
+  API_BASE_URL: 'https://lostnet-api.tail0e8b19.ts.net/api',
 
   GOOGLE_CLIENT_ID: '131580325520-73jrf8i9o54nhitc64etc4ppk41qkin4.apps.googleusercontent.com',
   DEFAULT_COORDS: [21.88, -102.29],
