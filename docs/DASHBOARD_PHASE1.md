@@ -138,3 +138,13 @@ Se entregan `dashboard-desktop.jpg` (1440×900) y `dashboard-mobile.jpg` (390×8
 Se retiraron los eslóganes del logo, la introducción de Explorar, el perfil y la ayuda. La cabecera del panel muestra el título funcional de la pestaña activa. Se simplificaron los pasos de ayuda y el estado de actualización, se eliminaron estilos sin uso y se redujo la altura máxima del panel de escritorio a 560px. La compilación posterior pasó con las mismas advertencias no bloqueantes de Astro/Vite. Esta revisión no cambia la lógica del mapa ni la API.
 
 Las capturas adjuntas corresponden a la entrega inicial, anterior a esta limpieza de textos. La compilación de esta revisión generó ambas páginas en 9.75s.
+
+## Reorganización de filtros y accesos
+
+Se eliminó el botón de abrir filtros del buscador y el acceso duplicado a Cómo funciona del perfil. La pestaña principal de ayuda permanece. Las categorías, cercanía, reportes propios y Limpiar filtros ahora están agrupados dentro de Explorar. Las categorías conservan desplazamiento horizontal; limpiar restablece la selección y el scroll al inicio.
+
+Validación: npm run build pasó (3.43s), sintaxis JS correcta y CONFIG/ApiService/formulario original sin cambios. En navegador con datos ficticios: Electrónica muestra 2 reportes; Ropa muestra 1; limpiar vuelve a 7 y a Todos con scrollLeft=0. Se comprobó escritorio 1440×900, móvil 390×844 y 320×568; sin overflow horizontal y última tarjeta accesible. Capturas de esta revisión: dashboard-filtros-desktop.jpg y dashboard-filtros-mobile.jpg. Los datos de estas capturas son de prueba y no acreditan que se haya restablecido la API real.
+
+## Reversión de ubicación de filtros
+
+Por solicitud del usuario, las categorías vuelven a flotar sobre el mapa y Limpiar filtros vuelve a la cabecera de resultados de Explorar. Se conservan eliminados el botón de filtros del buscador y el acceso duplicado de ayuda del perfil. No se modificaron la API ni el servidor.

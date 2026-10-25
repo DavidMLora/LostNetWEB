@@ -1,0 +1,100 @@
+---
+import Icon from './Icon.astro';
+import '../styles/report-form.css';
+const categories = [
+  { value: 'Electrónica', icon: 'phone' },
+  { value: 'Ropa', icon: 'shirt' },
+  { value: 'Documentos', icon: 'document' },
+  { value: 'Otros', icon: 'box' },
+];
+---
+<div id="report-modal" class="report-modal hidden" role="dialog" aria-modal="true" aria-labelledby="report-modal-title" aria-describedby="report-modal-subtitle">
+  <div class="report-dialog">
+    <header class="report-modal-header">
+      <span class="report-modal-mark"><Icon name="box" size={24} /></span>
+      <div><h2 id="report-modal-title">Nuevo reporte</h2><p id="report-modal-subtitle">Los campos con <span aria-hidden="true">*</span><span class="report-visually-hidden">asterisco</span> son obligatorios.</p></div>
+      <button id="btn-close-modal" class="report-close" type="button" aria-label="Cerrar nuevo reporte"><Icon name="close" size={21} /></button>
+    </header>
+
+    <form id="form-report" class="report-form">
+      <div id="report-form-body" class="report-form-body">
+        <div id="report-form-error" class="report-form-error" role="alert" tabindex="-1" hidden></div>
+
+        <div class="report-location">
+          <Icon name="pin" size={20} />
+          <div><span>Punto seleccionado</span><p id="report-location-text">Ubicación elegida en el mapa</p></div>
+          <button id="btn-change-location" type="button">Cambiar</button>
+        </div>
+
+        <fieldset class="report-fieldset report-type">
+          <legend>Tipo de reporte</legend>
+          <div class="report-type-options">
+            <label><input class="report-option-input" type="radio" name="status" value="LOST" checked /><span><Icon name="search" size={18} />Perdido</span></label>
+            <label><input class="report-option-input" type="radio" name="status" value="FOUND" /><span><Icon name="pin" size={18} />Encontrado</span></label>
+          </div>
+        </fieldset>
+
+        <div class="report-field">
+          <label class="report-field-label" for="input-photo">Foto del objeto <span class="report-required" aria-hidden="true">*</span></label>
+          <input id="input-photo" class="report-file-input" type="file" name="foto" accept="image/*" required aria-describedby="report-photo-error report-photo-preview-note" />
+          <label for="input-photo" id="dropzone" class="report-photo-control">
+            <span id="upload-placeholder" class="report-upload-placeholder">
+              <span class="report-upload-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h4l2-3h4l2 3h4v15H4V6Z" /><circle cx="12" cy="13" r="4" /></svg></span>
+              <strong>Añadir una foto</strong><span>Selecciona una imagen de tu dispositivo</span>
+            </span>
+            <span id="preview-container" class="report-preview" hidden><img id="preview-img" alt="Vista previa de la foto del objeto" /><span>Cambiar foto</span></span>
+          </label>
+          <div class="report-photo-details"><span id="photo-filename">Ningún archivo seleccionado</span><button id="btn-remove-photo" type="button" hidden>Quitar foto</button></div>
+          <p id="report-photo-preview-note" class="report-preview-note" role="status" hidden></p>
+          <p id="report-photo-error" class="report-field-error" aria-live="polite"></p>
+        </div>
+
+        <div class="report-field">
+          <div class="report-label-row"><label class="report-field-label" for="report-description">Descripción <span class="report-required" aria-hidden="true">*</span></label><span id="report-description-count">0/30</span></div>
+          <input id="report-description" class="report-input" type="text" name="description" maxlength="30" placeholder="Ej. Llaves con llavero azul" required aria-describedby="report-description-error report-description-count" />
+          <p id="report-description-error" class="report-field-error" aria-live="polite"></p>
+        </div>
+
+        <fieldset id="report-category-options" class="report-fieldset">
+          <legend>Categoría</legend>
+          <div class="report-category-options">
+            {categories.map(({ value, icon }) => (
+              <label><input class="report-option-input" type="radio" name="category" value={value} checked={value === 'Otros'} required aria-describedby="report-category-error" /><span><Icon name={icon} size={19} />{value}</span></label>
+            ))}
+          </div>
+          <p id="report-category-error" class="report-field-error" aria-live="polite"></p>
+        </fieldset>
+
+        <div class="report-field">
+          <label class="report-field-label" for="report-phone">Teléfono de contacto <span class="report-optional">(opcional)</span></label>
+          <input id="report-phone" class="report-input" type="tel" name="phone" autocomplete="tel" placeholder="Ej. 449 123 4567" />
+        </div>
+
+        <section class="report-security" aria-labelledby="report-security-title">
+          <div class="report-section-title"><Icon name="shield" size={19} /><h3 id="report-security-title">Verificación de propiedad</h3><span class="report-optional">Opcional</span></div>
+          <p class="report-security-hint">Usa un detalle del objeto que solo su dueño conozca.</p>
+          <div class="report-field">
+            <label class="report-field-label" for="report-security-question">Pregunta de seguridad</label>
+            <input id="report-security-question" class="report-input" type="text" name="security_question" placeholder="Ej. ¿Qué tiene grabado el llavero?" />
+          </div>
+          <div class="report-field">
+            <label class="report-field-label" for="report-security-answer">Respuesta</label>
+            <div class="report-answer-control"><input id="report-security-answer" class="report-input" type="password" name="security_answer" autocomplete="off" placeholder="Escribe la respuesta" /><button id="btn-toggle-answer" type="button" aria-pressed="false" aria-label="Mostrar respuesta de seguridad">Mostrar</button></div>
+          </div>
+        </section>
+        <input type="hidden" name="lat" id="input-lat" />
+        <input type="hidden" name="lon" id="input-lon" />
+      </div>
+      <footer class="report-form-footer">
+        <p id="report-submit-status" class="report-submit-status" role="status" aria-live="polite"></p>
+        <button id="btn-submit-report" class="report-publish" type="submit"><svg id="report-submit-spinner" class="report-submit-spinner" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" hidden><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" opacity=".25" /><path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" /></svg><span id="report-submit-label">Publicar reporte</span><Icon class="report-submit-arrow" name="arrow" size={19} /></button>
+      </footer>
+    </form>
+
+    <section id="report-success" class="report-success" hidden>
+      <span class="report-success-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m8 12 3 3 5-6" /></svg></span>
+      <h3>Reporte publicado</h3><p id="report-success-message" role="status" aria-live="polite">El reporte se publicó correctamente.</p>
+      <button id="btn-report-done" class="report-publish" type="button">Volver al mapa<Icon name="arrow" size={19} /></button>
+    </section>
+  </div>
+</div>

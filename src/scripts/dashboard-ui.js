@@ -13,7 +13,6 @@ export const initDashboardUI = (currentUser) => {
     if (content) content.hidden = !expanded;
     handle?.setAttribute('aria-expanded', String(expanded));
     handle?.setAttribute('aria-label', expanded ? 'Contraer panel' : 'Expandir panel');
-    byId('btn-menu-toggle')?.setAttribute('aria-expanded', String(expanded));
     byId('btn-close-menu')?.setAttribute('aria-expanded', String(expanded));
     byId('btn-close-menu')?.setAttribute('aria-label', expanded ? 'Contraer panel' : 'Expandir panel');
   };
@@ -81,11 +80,7 @@ export const initDashboardUI = (currentUser) => {
     expand(root?.dataset.panelExpanded !== 'true');
   });
   byId('btn-close-menu')?.addEventListener('click', () => expand(root?.dataset.panelExpanded !== 'true'));
-  byId('btn-menu-toggle')?.addEventListener('click', () => openTab('explore'));
   byId('btn-profile')?.addEventListener('click', () => openTab('you'));
-  root?.querySelectorAll('[data-open-tab]').forEach((button) => {
-    button.addEventListener('click', () => openTab(button.dataset.openTab));
-  });
   const categories = [...document.querySelectorAll('.filter-cat')];
   const summarize = () => {
     const count = categories.filter((input) => input.checked).length;
@@ -98,7 +93,12 @@ export const initDashboardUI = (currentUser) => {
     input.checked = false;
     input.dispatchEvent(new Event('change', { bubbles: true }));
   };
-  const clearCategories = () => { categories.forEach(uncheck); summarize(); };
+  const clearCategories = () => {
+    categories.forEach(uncheck);
+    summarize();
+    const strip = root?.querySelector('.category-strip');
+    if (strip) strip.scrollLeft = 0;
+  };
   categories.forEach((input) => input.addEventListener('change', summarize));
   byId('filter-all')?.addEventListener('click', clearCategories);
   byId('btn-clear-filters')?.addEventListener('click', () => {

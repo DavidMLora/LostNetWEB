@@ -5,6 +5,7 @@
 
 import L from 'leaflet';
 import { initDashboardUI } from './dashboard-ui.js';
+import { initReportForm } from './report-form.js';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine';
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
@@ -782,7 +783,6 @@ const initApp = async () => {
 
   const ui = {
     menu: $('sidebar-menu'),
-    btnMenu: $('btn-menu-toggle'),
     btnCloseMenu: $('btn-close-menu'),
     btnRefresh: $('btn-refresh'),
     btnGps: $('btn-gps'),
@@ -808,12 +808,6 @@ const initApp = async () => {
     status: $('status-indicator'),
     loginBtn: $('google-login-btn'),
     modal: $('report-modal'),
-    btnCloseModal: $('btn-close-modal'),
-    formReport: $('form-report'),
-    inputPhoto: $('input-photo'),
-    previewImg: $('preview-img'),
-    previewContainer: $('preview-container'),
-    uploadPlaceholder: $('upload-placeholder'),
     inputLat: $('input-lat'),
     inputLon: $('input-lon')
   };
@@ -831,14 +825,46 @@ const initApp = async () => {
     }
   };
 
+  const reportForm = initReportForm({
+    getUser: () => SessionManager.getUser(),
+    publish: ({ user, fields: rawForm, photo }) => {
+      const manualData = new FormData();
+      const userId = user.sub || 'anon';
+      const userEmail = user.email || '';
+
+      manualData.append('user_id', userId);
+      manualData.append('email', userEmail);
+      manualData.append('description', rawForm.get('description'));
+      manualData.append('category', rawForm.get('category'));
+      manualData.append('phone', rawForm.get('phone'));
+      manualData.append('security_question', rawForm.get('security_question'));
+      manualData.append('security_answer', rawForm.get('security_answer'));
+      manualData.append('latitude', rawForm.get('lat'));
+      manualData.append('longitude', rawForm.get('lon'));
+      manualData.append('status', rawForm.get('status') || 'LOST');
+      manualData.append(
+        'timestamp',
+        Math.floor(Date.now() / 1000).toString()
+      );
+      if (photo) manualData.append('foto', photo);
+
+      return api.post(CONFIG.ENDPOINTS.REPORTAR, manualData);
+    },
+    onPublished: () => setTimeout(loadData, 2000),
+    onChangeLocation: () => {
+      setReportSelection(true);
+      showToast('Elige la ubicación del reporte en el mapa.', 'info');
+    },
+    notify: showToast
+  });
+
   // The existing report form still receives the exact map coordinates.
   if (mapController.map && ui.btnAddReport && ui.modal) {
     mapController.map.on('click', (e) => {
       if (!isSelectionMode) return;
-      ui.inputLat.value = e.latlng.lat;
-      ui.inputLon.value = e.latlng.lng;
       setReportSelection(false);
-      ui.modal.classList.remove('hidden');
+      $('toast')?.classList.add('hidden');
+      reportForm.open(e.latlng.lat, e.latlng.lng);
     });
   }
 
@@ -1042,74 +1068,13 @@ const initApp = async () => {
         );
         return;
       }
+      if (reportForm.isSubmitting()) {
+        showToast('Tu reporte sigue publicándose. Espera a que termine.', 'info');
+        return;
+      }
       setReportSelection(!isSelectionMode);
       if (isSelectionMode)
         showToast('Haz clic en el mapa donde quieras colocar el reporte.', 'info');
-    };
-  }
-
-  ui.btnCloseModal &&
-    (ui.btnCloseModal.onclick = () => ui.modal.classList.add('hidden'));
-
-  if (ui.inputPhoto) {
-    ui.inputPhoto.onchange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        ui.previewImg.src = ev.target.result;
-        ui.previewContainer.classList.remove('hidden');
-        ui.uploadPlaceholder.classList.add('hidden');
-      };
-      reader.readAsDataURL(file);
-    };
-  }
-
-  if (ui.formReport) {
-    ui.formReport.onsubmit = async (e) => {
-      e.preventDefault();
-      if (!currentUser) return;
-
-      const manualData = new FormData();
-      const rawForm = new FormData(ui.formReport);
-      const userId = currentUser.sub || 'anon';
-      const userEmail = currentUser.email || '';
-
-      manualData.append('user_id', userId);
-      manualData.append('email', userEmail);
-      manualData.append('description', rawForm.get('description'));
-      manualData.append('category', rawForm.get('category'));
-      manualData.append('phone', rawForm.get('phone'));
-      manualData.append('security_question', rawForm.get('security_question'));
-      manualData.append('security_answer', rawForm.get('security_answer'));
-      manualData.append('latitude', ui.inputLat.value);
-      manualData.append('longitude', ui.inputLon.value);
-      manualData.append('status', 'LOST');
-      manualData.append(
-        'timestamp',
-        Math.floor(Date.now() / 1000).toString()
-      );
-      if (ui.inputPhoto.files[0])
-        manualData.append('foto', ui.inputPhoto.files[0]);
-
-      const submitBtn = $('btn-submit-report');
-      submitBtn.innerHTML = '⏳';
-      submitBtn.disabled = true;
-
-      try {
-        await api.post(CONFIG.ENDPOINTS.REPORTAR, manualData);
-        showToast('¡Reporte publicado!', 'success');
-        ui.modal.classList.add('hidden');
-        ui.formReport.reset();
-        ui.previewContainer.classList.add('hidden');
-        ui.uploadPlaceholder.classList.remove('hidden');
-        setTimeout(loadData, 2000);
-      } catch (err) {
-        showToast(err.message || 'Error al publicar el reporte.', 'error');
-      } finally {
-        submitBtn.innerHTML = 'Publicar Reporte';
-        submitBtn.disabled = false;
-      }
     };
   }
 
