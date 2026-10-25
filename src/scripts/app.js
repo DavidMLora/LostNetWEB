@@ -4,6 +4,7 @@
  */
 
 import L from 'leaflet';
+import { initDashboardUI } from './dashboard-ui.js';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine';
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
@@ -15,6 +16,9 @@ import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
 
 const NEARBY_RADIUS_METERS = 2500;
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]
+);
 
 const CONFIG = {
   // --- RUTAS DE LA VPN AL SERVIDOR PRINCIPAL ---
@@ -155,14 +159,21 @@ const injectCustomStyles = () => {
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
       border: 1px solid rgba(229, 231, 235, 0.8);
       font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
-      position: fixed !important; right: 20px !important; top: 80px !important;    
+      position: fixed !important; right: 88px !important; top: 160px !important;
       left: auto !important; bottom: auto !important; max-width: 320px;
-      color: #1f2937; z-index: 9999 !important; 
+      color: #1f2937; z-index: 50 !important;
     }
     .leaflet-routing-container h2 { display: none; }
     .leaflet-routing-alt table { margin-bottom: 5px; width: 100%; }
     .leaflet-routing-alt { max-height: 300px; overflow-y: auto; scrollbar-width: thin; } 
     .leaflet-routing-alt:not(:first-of-type) { display: none !important; }
+    @media (max-width: 767px) {
+      .routing-container-custom {
+        top: 192px !important; right: 68px !important; left: 14px !important;
+        max-width: none; max-height: 170px; overflow-y: auto;
+      }
+      .leaflet-routing-alt { max-height: 120px; }
+    }
     @media print { .routing-container-custom { display: none; } }
   `;
   document.head.appendChild(style);
@@ -523,7 +534,7 @@ class MapController {
     if (this.map || !$(this.elementId)) return;
     this.map = L.map(this.elementId, { zoomControl: false }).setView(coords, zoom);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© LostNet'
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · LostNet'
     }).addTo(this.map);
     this.markers.addTo(this.map);
   }
@@ -718,6 +729,7 @@ class MapController {
     });
     marker.bindPopup(popupContent);
     marker.addTo(this.markers);
+    marker.getElement()?.setAttribute('aria-label', title + ': ' + (isSafePoint ? data.nombre : getReportTitle(data)));
 
     if (data.id) this.markerMap[data.id] = marker;
 
@@ -753,6 +765,7 @@ const initApp = async () => {
 
   const api = new ApiService();
   const mapController = new MapController('map');
+  const dashboardUI = initDashboardUI(currentUser);
   ViewModal.init(api);
 
   const state = {
@@ -765,7 +778,7 @@ const initApp = async () => {
   };
 
   let isSelectionMode = false;
-  let originalBtnContent = '';
+  let connectionState = 'loading';
 
   const ui = {
     menu: $('sidebar-menu'),
@@ -808,19 +821,24 @@ const initApp = async () => {
   // Iniciar mapa
   mapController.init(CONFIG.DEFAULT_COORDS, CONFIG.DEFAULT_ZOOM);
 
-  // Click en mapa para seleccionar punto del reporte
+  const setReportSelection = (active) => {
+    isSelectionMode = active;
+    dashboardUI.setSelectionMode(active);
+    if ($('map')) $('map').style.cursor = active ? 'crosshair' : '';
+    if (active) {
+      dashboardUI.collapsePanel();
+      setNotificationsOpen(false);
+    }
+  };
+
+  // The existing report form still receives the exact map coordinates.
   if (mapController.map && ui.btnAddReport && ui.modal) {
     mapController.map.on('click', (e) => {
       if (!isSelectionMode) return;
-      const { lat, lng } = e.latlng;
-      ui.inputLat.value = lat;
-      ui.inputLon.value = lng;
+      ui.inputLat.value = e.latlng.lat;
+      ui.inputLon.value = e.latlng.lng;
+      setReportSelection(false);
       ui.modal.classList.remove('hidden');
-      isSelectionMode = false;
-      ui.btnAddReport.innerHTML = originalBtnContent;
-      ui.btnAddReport.classList.remove('bg-red-600', 'hover:bg-red-700');
-      ui.btnAddReport.classList.add('bg-blue-600', 'hover:bg-blue-700');
-      $('map').style.cursor = '';
     });
   }
 
@@ -885,8 +903,10 @@ const initApp = async () => {
 
     if (ui.reportsList) ui.reportsList.innerHTML = '';
     if (filteredReports.length === 0 && ui.reportsList) {
-      ui.reportsList.innerHTML =
-        '<p class="text-center text-gray-400 text-xs py-10">No se encontraron reportes.</p>';
+      const message = connectionState === 'offline'
+        ? 'Los reportes no están disponibles. Pulsa Actualizar para volver a intentarlo.'
+        : 'No hay reportes con estos filtros. Prueba otra búsqueda o explora otra categoría.';
+      ui.reportsList.innerHTML = '<p class="list-message">' + message + '</p>';
     }
 
     filteredReports.forEach((r) => {
@@ -902,46 +922,36 @@ const initApp = async () => {
 
       if (ui.reportsList) {
         const displayTitle = getReportTitle(r);
-        const card = document.createElement('div');
-        card.className =
-          'p-3 bg-white border border-gray-100 rounded-lg hover:shadow-md transition-shadow cursor-pointer flex gap-3 relative group';
-
-        const deleteBtnHtml = isOwner
-          ? `<button class="btn-delete-list absolute top-2 right-2 text-gray-400 hover:text-red-500 bg-white/80 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity" title="Eliminar">🗑️</button>`
-          : '';
-
-        card.innerHTML = `
-          <div class="w-12 h-12 bg-gray-100 rounded-md overflow-hidden flex-shrink-0 flex items-center justify-center bg-slate-50">
-              ${imgUrl
-            ? `<img src="${imgUrl}" class="w-full h-full object-cover">`
-            : `<span class="text-xl">📦</span>`
-          }
-          </div>
-          <div class="flex-1 min-w-0 pr-6">
-              <h4 class="text-sm font-bold text-gray-700 truncate">${displayTitle}</h4>
-              <div class="flex items-center justify-between mt-1">
-                  <span class="text-[10px] bg-blue-50 text-blue-600 px-1.5 rounded border border-blue-100">${rCat}</span>
-                  <span class="text-[10px] text-gray-400">${r.timestamp
-            ? new Date(r.timestamp * 1000).toLocaleDateString()
-            : ''
-          }</span>
-              </div>
-          </div>
-          ${deleteBtnHtml}`;
-
-        card.onclick = (e) => {
-          if (e.target.closest('.btn-delete-list')) {
-            e.stopPropagation();
-            handleDeleteReport(r.id);
-            return;
-          }
-          if (marker) {
-            const { lat, lon } = getCoords(r);
-            mapController.flyToLocation(lat, lon);
-            marker.openPopup();
-            if (window.innerWidth < 640 && ui.menu) toggleMenu();
-          }
+        const card = document.createElement('article');
+        card.className = 'report-card';
+        const date = r.timestamp
+          ? new Date(r.timestamp * 1000).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
+          : 'Reporte de la comunidad';
+        card.innerHTML =
+          '<button class="report-card-open" aria-label="Ver en el mapa: ' + escapeHtml(displayTitle) + '">' +
+            '<span class="report-thumbnail">' + (imgUrl
+              ? '<img src="' + escapeHtml(imgUrl) + '" alt="" loading="lazy">'
+              : '<svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m12 3 9 5v9l-9 5-9-5V8l9-5Zm0 10v9M3 8l9 5 9-5M7.5 5.5l9 5"/></svg>') +
+            '</span><span class="report-card-copy">' +
+              '<span class="report-card-title">' + escapeHtml(displayTitle) + '</span>' +
+              '<span class="report-category">' + escapeHtml(rCat) + '</span>' +
+              '<span class="report-date">' + escapeHtml(date) + (isOwner ? ' · Tu reporte' : '') + '</span>' +
+            '</span><span class="report-card-arrow" aria-hidden="true">›</span></button>' +
+          (isOwner ? '<button class="report-delete" title="Eliminar reporte" aria-label="Eliminar reporte: ' + escapeHtml(displayTitle) + '">×</button>' : '');
+        const photo = card.querySelector('img');
+        if (photo) photo.onerror = () => {
+          photo.remove();
+          card.querySelector('.report-thumbnail').textContent = '◇';
         };
+        card.querySelector('.report-card-open').onclick = () => {
+          if (!marker) return;
+          const { lat, lon } = getCoords(r);
+          if (window.innerWidth < 768) dashboardUI.collapsePanel();
+          mapController.flyToLocation(lat, lon);
+          marker.openPopup();
+        };
+        const deleteButton = card.querySelector('.report-delete');
+        if (deleteButton) deleteButton.onclick = () => handleDeleteReport(r.id);
         ui.reportsList.appendChild(card);
       }
     });
@@ -952,6 +962,8 @@ const initApp = async () => {
 
     ui.stats.reportes && (ui.stats.reportes.textContent = filteredReports.length);
     ui.stats.seguros && (ui.stats.seguros.textContent = state.allSafePoints.length);
+    if ($('profile-report-count')) $('profile-report-count').textContent =
+      state.allReports.filter((report) => isReportOwner(report, currentUser)).length;
   };
 
   // -------- BADGE DE NOTIFICACIONES (PUNTO ROJO) --------
@@ -975,8 +987,11 @@ const initApp = async () => {
     try {
       if (!mapController.map) return;
       if (ui.status)
-        ui.status.innerHTML =
-          '<span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span> Sincronizando...';
+        ui.status.innerHTML = '<span class="status-dot"></span>Actualizando…';
+      connectionState = 'loading';
+      dashboardUI.setConnection('loading');
+      ui.reportsList?.setAttribute('aria-busy', 'true');
+      ui.btnRefresh?.setAttribute('aria-busy', 'true');
       const results = await api.fetchData(currentUser);
       const [reportsRes, safesRes, configRes] = results;
       const hasErrors = results.some((r) => r.status === 'rejected');
@@ -996,16 +1011,24 @@ const initApp = async () => {
       state.allSafePoints =
         safesRes.status === 'fulfilled' ? safesRes.value : [];
 
+      connectionState = hasErrors ? 'offline' : 'online';
+      dashboardUI.setConnection(connectionState);
       render();
       refreshNotificationBadge();
 
       if (ui.status) {
         ui.status.innerHTML = hasErrors
-          ? '<span class="w-2 h-2 rounded-full bg-red-500"></span> Desconectado'
-          : '<span class="w-2 h-2 rounded-full bg-green-500"></span> En línea';
+          ? '<span class="status-dot"></span>Sin conexión'
+          : '<span class="status-dot"></span>En línea';
       }
     } catch (e) {
       console.error(e);
+      connectionState = 'offline';
+      dashboardUI.setConnection('offline');
+      if (ui.status) ui.status.innerHTML = '<span class="status-dot"></span>Sin conexión';
+    } finally {
+      ui.reportsList?.setAttribute('aria-busy', 'false');
+      ui.btnRefresh?.setAttribute('aria-busy', 'false');
     }
   };
 
@@ -1019,21 +1042,9 @@ const initApp = async () => {
         );
         return;
       }
-      isSelectionMode = !isSelectionMode;
-
-      if (isSelectionMode) {
-        originalBtnContent = ui.btnAddReport.innerHTML;
-        ui.btnAddReport.innerHTML = `<span class="text-2xl font-bold">❌</span>`;
-        ui.btnAddReport.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-        ui.btnAddReport.classList.add('bg-red-600', 'hover:bg-red-700');
-        $('map').style.cursor = 'crosshair';
+      setReportSelection(!isSelectionMode);
+      if (isSelectionMode)
         showToast('Haz clic en el mapa donde quieras colocar el reporte.', 'info');
-      } else {
-        ui.btnAddReport.innerHTML = originalBtnContent;
-        ui.btnAddReport.classList.remove('bg-red-600', 'hover:bg-red-700');
-        ui.btnAddReport.classList.add('bg-blue-600', 'hover:bg-blue-700');
-        $('map').style.cursor = '';
-      }
     };
   }
 
@@ -1103,23 +1114,33 @@ const initApp = async () => {
   }
 
   ui.btnRefresh && (ui.btnRefresh.onclick = loadData);
+  $('btn-zoom-in')?.addEventListener('click', () => mapController.map?.zoomIn());
+  $('btn-zoom-out')?.addEventListener('click', () => mapController.map?.zoomOut());
   ui.btnLogout && (ui.btnLogout.onclick = SessionManager.logout);
 
-  if (ui.btnGps) {
-    ui.btnGps.onclick = () => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          mapController.updateUserLocation(
-            pos.coords.latitude,
-            pos.coords.longitude
-          );
-          mapController.flyToUser();
-          refreshNotificationBadge();
-        },
-        () => console.log('GPS error')
-      );
-    };
-  }
+  const updateLocation = (pos, center = true) => {
+    mapController.updateUserLocation(pos.coords.latitude, pos.coords.longitude);
+    if (center) mapController.flyToUser();
+    if (state.filterNearby) render();
+    refreshNotificationBadge();
+    if (ui.notificationsMenu && !ui.notificationsMenu.hidden) populateNotifications();
+  };
+  const requestLocation = () => {
+    if (!navigator.geolocation) {
+      showToast('Este navegador no ofrece ubicación.', 'warning');
+      return;
+    }
+    ui.btnGps?.setAttribute('aria-busy', 'true');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { updateLocation(pos); ui.btnGps?.setAttribute('aria-busy', 'false'); },
+      () => {
+        ui.btnGps?.setAttribute('aria-busy', 'false');
+        showToast('No pudimos obtener tu ubicación. Revisa el permiso del navegador.', 'warning');
+      },
+      { timeout: 10000 }
+    );
+  };
+  if (ui.btnGps) ui.btnGps.onclick = requestLocation;
 
   ui.searchInput &&
     ui.searchInput.addEventListener('input', (e) => {
@@ -1157,33 +1178,13 @@ const initApp = async () => {
     });
   });
 
-  // ------- MENÚ IZQUIERDO -------
-  const toggleMenu = () => {
-    if (!ui.menu) return;
-    const isMobile = window.innerWidth < 1024;
-    if (isMobile) {
-      ui.menu.classList.toggle('-translate-y-full');
-      ui.menu.classList.toggle('sm:-translate-x-full');
-    } else {
-      ui.menu.classList.toggle('lg:translate-x-0');
-    }
-  };
-
-  ui.btnMenu && ui.btnMenu.addEventListener('click', toggleMenu);
-  ui.btnCloseMenu &&
-    ui.btnCloseMenu.addEventListener('click', () => {
-      if (!ui.menu) return;
-      ui.menu.classList.add('-translate-y-full');
-      ui.menu.classList.add('sm:-translate-x-full');
-    });
-
   // ------- PANEL LATERAL DERECHO (NOTIFICACIONES) -------
   const populateNotifications = () => {
     if (!ui.notificationsList) return;
 
     if (!mapController.userLocation) {
       ui.notificationsList.innerHTML =
-        '<p class="text-center text-xs text-gray-400 py-10">Presiona 📍 "Ubicarme" primero<br>para ver reportes cercanos.</p>';
+        '<p class="list-message">Activa «Ubicarme» para ver los reportes de tu zona.</p>';
       return;
     }
 
@@ -1195,7 +1196,7 @@ const initApp = async () => {
 
     if (nearbyReports.length === 0) {
       ui.notificationsList.innerHTML =
-        '<p class="text-center text-xs text-gray-400 py-10">Sin alertas cercanas</p>';
+        '<p class="list-message">No hay reportes a menos de 2.5 km de tu ubicación.</p>';
       return;
     }
 
@@ -1208,26 +1209,15 @@ const initApp = async () => {
         lat,
         lon
       );
-      const item = document.createElement('div');
-      item.className =
-        'flex items-center gap-3 p-3 hover:bg-blue-50 rounded cursor-pointer transition-colors border-b border-gray-100 last:border-0';
-      item.innerHTML = `
-          <div class="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-500">📦</div>
-          <div class="flex-1 min-w-0">
-              <p class="text-sm font-bold text-gray-700 truncate">${getReportTitle(
-        r
-      )}</p>
-              <p class="text-[10px] text-blue-500 font-medium">${Math.round(
-        dist
-      )} m</p>
-          </div>
-          <div class="text-gray-300">›</div>
-        `;
+      const item = document.createElement('button');
+      item.className = 'notification-item';
+      item.innerHTML = '<span aria-hidden="true">◇</span><span class="flex-1 min-w-0">' +
+        '<strong class="truncate">' + escapeHtml(getReportTitle(r)) + '</strong>' +
+        '<small>' + Math.round(dist) + ' m de ti</small></span><span aria-hidden="true">›</span>';
       item.onclick = () => {
-        ui.notificationsMenu &&
-          ui.notificationsMenu.classList.add('translate-x-full');
-        ui.badgeNotifications &&
-          ui.badgeNotifications.classList.add('hidden');
+        setNotificationsOpen(false);
+        ui.badgeNotifications?.classList.add('hidden');
+        if (window.innerWidth < 768) dashboardUI.collapsePanel();
         mapController.flyToLocation(lat, lon);
         setTimeout(() => mapController.openMarkerPopup(r.id), 300);
       };
@@ -1235,29 +1225,67 @@ const initApp = async () => {
     });
   };
 
-  const toggleNotificationsSidebar = () => {
-    if (!ui.notificationsMenu) return;
-    ui.notificationsMenu.classList.toggle('translate-x-full');
-    const isOpen = !ui.notificationsMenu.classList.contains('translate-x-full');
-    if (isOpen) {
+  let notificationReturnFocus = null;
+  const setNotificationsOpen = (open) => {
+    if (!ui.notificationsMenu || open === !ui.notificationsMenu.hidden) return;
+    if (open) notificationReturnFocus = document.activeElement;
+    ui.notificationsMenu.hidden = !open;
+    ui.notificationsMenu.inert = !open;
+    if ($('notifications-backdrop')) $('notifications-backdrop').hidden = !open;
+    ui.btnNotificationsSidebar?.setAttribute('aria-expanded', String(open));
+    document.querySelectorAll('.lostnet-dashboard > :not(#notifications-menu):not(#notifications-backdrop)')
+      .forEach((element) => { element.inert = open; });
+    if (open) {
       populateNotifications();
-      ui.badgeNotifications &&
-        ui.badgeNotifications.classList.add('hidden');
-    }
+      ui.badgeNotifications?.classList.add('hidden');
+      ui.btnCloseNotifications?.focus();
+    } else notificationReturnFocus?.focus();
   };
+  ui.btnNotificationsSidebar?.addEventListener('click', () => setNotificationsOpen(true));
+  $('btn-profile-alerts')?.addEventListener('click', () => setNotificationsOpen(true));
+  ui.btnCloseNotifications?.addEventListener('click', () => setNotificationsOpen(false));
+  $('notifications-backdrop')?.addEventListener('click', () => setNotificationsOpen(false));
 
-  ui.btnNotificationsSidebar &&
-    (ui.btnNotificationsSidebar.onclick = (e) => {
-      e.stopPropagation();
-      toggleNotificationsSidebar();
-    });
-
-  ui.btnCloseNotifications &&
-    (ui.btnCloseNotifications.onclick = (e) => {
-      e.stopPropagation();
-      ui.notificationsMenu &&
-        ui.notificationsMenu.classList.add('translate-x-full');
-    });
+  // Preserve the forms while making all dialogs keyboard operable.
+  const dialogs = [ui.modal, $('view-modal')].filter(Boolean);
+  dialogs.forEach((modal) => {
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', modal === ui.modal ? 'Nuevo reporte' : 'Detalle del reporte');
+    let wasOpen = false;
+    let returnFocus;
+    new MutationObserver(() => {
+      const open = !modal.classList.contains('hidden');
+      if (open === wasOpen) return;
+      wasOpen = open;
+      const root = document.querySelector('.lostnet-dashboard');
+      if (root) root.inert = dialogs.some((dialog) => !dialog.classList.contains('hidden'));
+      if (open) {
+        returnFocus = document.activeElement;
+        modal.querySelector('button, input, select, textarea, a[href]')?.focus();
+      } else if (returnFocus?.isConnected) returnFocus.focus();
+    }).observe(modal, { attributes: true, attributeFilter: ['class'] });
+  });
+  document.addEventListener('keydown', (event) => {
+    const activeDialog = [...dialogs].reverse().find((dialog) => !dialog.classList.contains('hidden'))
+      || (ui.notificationsMenu && !ui.notificationsMenu.hidden ? ui.notificationsMenu : null);
+    if (event.key === 'Escape') {
+      if (activeDialog === ui.notificationsMenu) setNotificationsOpen(false);
+      else if (activeDialog) activeDialog.classList.add('hidden');
+      else if (isSelectionMode) setReportSelection(false);
+      else return;
+      event.preventDefault();
+    }
+    if (event.key !== 'Tab' || !activeDialog) return;
+    const focusable = [...activeDialog.querySelectorAll('button, input, select, textarea, a[href], [tabindex="0"]')]
+      .filter((element) => !element.disabled && !element.hidden && element.getClientRects().length);
+    const first = focusable[0], last = focusable.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault(); last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault(); first?.focus();
+    }
+  });
 
   // ------- GOOGLE LOGIN -------
   if (window.google && ui.loginBtn) {
@@ -1279,16 +1307,10 @@ const initApp = async () => {
   // ------- ARRANQUE INICIAL -------
   if (mapController.map) {
     await loadData();
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        mapController.updateUserLocation(
-          pos.coords.latitude,
-          pos.coords.longitude
-        );
-        mapController.flyToUser();
-        refreshNotificationBadge();
-      },
-      () => console.log('GPS ok')
+    if (navigator.geolocation) navigator.geolocation.getCurrentPosition(
+      (pos) => updateLocation(pos),
+      () => console.info('Ubicación no disponible; el mapa sigue activo.'),
+      { timeout: 10000 }
     );
   }
 };
