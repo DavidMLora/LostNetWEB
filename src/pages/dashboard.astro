@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icon.astro';
 import ReportModal from '../components/ReportModal.astro';
+import ReportDetail from '../components/ReportDetail.astro';
 import '../styles/dashboard.css';
 const categories = [
   { value: 'Documentos', icon: 'document' },
@@ -102,21 +103,8 @@ const categories = [
 <!-- Creación de reportes: mantiene el contrato y la ubicación elegida en el mapa. -->
 <ReportModal />
 
-<!-- MODAL VISTA DETALLADA -->
-<div id="view-modal" class="fixed inset-0 z-[2000] bg-black/50 hidden flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
-  <div class="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden relative">
-      
-      <!-- Contenido se llenará con JS -->
-      <div id="view-modal-content" class="overflow-y-auto custom-scrollbar flex-1 pb-4">
-        <!-- Template (JS lo reemplazará) -->
-      </div>
-      
-      <!-- Botón cerrar -->
-      <button id="btn-close-view" aria-label="Cerrar detalle del reporte" class="absolute top-4 right-4 bg-black/30 hover:bg-black/50 text-white rounded-full p-2 backdrop-blur-sm transition-colors z-10 w-8 h-8 flex items-center justify-center">
-          ✕
-      </button>
-  </div>
-</div>
+<!-- Consulta de reportes y comentarios. -->
+<ReportDetail />
 
 <div id="google-login-btn" class="hidden fixed top-4 right-4 z-[1000]"></div>
 <div

@@ -6,6 +6,14 @@
 import L from 'leaflet';
 import { initDashboardUI } from './dashboard-ui.js';
 import { initReportForm } from './report-form.js';
+import { createReportDetail } from './report-detail.js';
+import { createReportCard } from './report-cards.js';
+import { createReportPopup } from './report-popup.js';
+import {
+  escapeHtml, icon, getReportTitle, getReportType, getReportCoordinates,
+  getReportCategory, formatReportDate, getReportDate, getReportImage, getLocationLabel,
+  maskPublicEmail, getWhatsAppLink, getReportKey, uniqueReports
+} from './reports-utils.js';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine';
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
@@ -17,10 +25,6 @@ import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
 
 const NEARBY_RADIUS_METERS = 2500;
-const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) =>
-  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]
-);
-
 const CONFIG = {
   // --- RUTAS DE LA VPN AL SERVIDOR PRINCIPAL ---
   SERVER_URL: 'https://lostnet-api.tail0e8b19.ts.net',
@@ -99,16 +103,10 @@ const getDistanceInMeters = (lat1, lon1, lat2, lon2) => {
 
 // helpers para reports
 
-const getCoords = (item) => ({
-  lat: item.latitude || item.lat,
-  lon: item.longitude || item.lon
-});
+const getCoords = (item) => getReportCoordinates(item) || { lat: null, lon: null };
 
 const normalizeCategory = (cat) =>
   CONFIG.VALID_CATEGORIES.includes(cat) ? cat : 'Otros';
-
-const getReportTitle = (r) =>
-  r.description || r.desc_short || r.descripcion || 'Sin título';
 
 const isReportOwner = (r, currentUser) => {
   if (!currentUser) return false;
@@ -324,199 +322,16 @@ class ApiService {
   }
 }
 
-// ---------- VIEW MODAL (DETALLES + WHATSAPP + COMENTARIOS) ----------
-
-const ViewModal = {
-  init(apiService) {
-    this.api = apiService;
-    this.modal = $('view-modal');
-    this.content = $('view-modal-content');
-    this.btnClose = $('btn-close-view');
-
-    if (this.btnClose) this.btnClose.onclick = () => this.close();
-  },
-
-  async open(report) {
-    if (!this.modal) return;
-    this.modal.classList.remove('hidden');
-
-    const imgUrl = this.api.resolveUrl(report.photo_url || report.imagen_url);
-    const displayDesc = getReportTitle(report);
-    const user = SessionManager.getUser();
-
-    this.content.innerHTML = `
-      <div class="relative w-full h-64 bg-gray-100 group">
-        ${imgUrl
-        ? `<img src="${imgUrl}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">`
-        : `<div class="flex items-center justify-center h-full text-4xl text-gray-300">📦</div>`
-      }
-        <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 pt-12">
-          <span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded uppercase font-bold shadow-sm">${report.category || 'Otros'
-      }</span>
-          <h2 class="text-white font-bold text-xl mt-1 shadow-sm leading-tight">${displayDesc}</h2>
-        </div>
-      </div>
-      
-      <div class="p-5 space-y-5 bg-white">
-        <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm shadow-sm">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-lg">👤</span>
-            <div>
-              <p class="font-bold text-gray-700 text-xs uppercase">Publicado por</p>
-              <p class="text-gray-600">${report.user_id
-        ? report.email
-          ? maskEmail(report.email)
-          : 'Usuario'
-        : 'Anónimo'
-      }</p>
-            </div>
-          </div>
-          
-          ${report.security_question && report.security_question !== 'N/A'
-        ? `<div class="mt-3 pt-3 border-t border-slate-200">
-                   <div class="flex items-start gap-2">
-                      <span class="text-lg">🔒</span>
-                      <div>
-                          <p class="text-xs text-orange-600 font-bold uppercase">Pregunta de Seguridad</p>
-                          <p class="text-gray-700 italic text-sm mt-0.5">"${report.security_question
-        }"</p>
-                      </div>
-                   </div>
-                 </div>`
-        : ''
-      }
-        </div>
-
-        ${report.phone && String(report.phone).trim() !== ''
-        ? `
-          <button id="btn-whatsapp-action" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-xl shadow-md flex items-center justify-center gap-2 transition-transform active:scale-95">
-              <span class="text-2xl">💬</span> 
-              <div class="text-left leading-tight">
-                  <span class="block text-xs font-normal opacity-90">¿Lo encontraste?</span>
-                  <span class="block">Enviar mensaje WhatsApp</span>
-              </div>
-          </button>
-        `
-        : `<div class="text-center text-xs text-gray-400 bg-gray-50 p-3 rounded-lg border border-dashed border-gray-200">Este reporte no tiene teléfono de contacto público.</div>`
-      }
-        
-        <hr class="border-gray-100">
-
-        <div class="flex flex-col h-72">
-          <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2 text-sm">
-              <span>💬</span> Comentarios de la Comunidad
-          </h3>
-          
-          <div id="comments-list" class="flex-1 overflow-y-auto custom-scrollbar bg-gray-50 p-3 rounded-xl mb-3 border border-gray-100">
-              <p class="text-center text-xs text-gray-400 py-8">Cargando comentarios...</p>
-          </div>
-
-          <form id="form-comment" class="flex gap-2">
-              <input type="text" name="comment_text" placeholder="Escribe algo útil..." required 
-                     class="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all">
-              <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
-                  ➤
-              </button>
-          </form>
-        </div>
-      </div>
-    `;
-
-    const btnWa = $('btn-whatsapp-action');
-    if (btnWa && report.phone) {
-      btnWa.onclick = () => {
-        const text = `Hola, vi en LostNet que perdiste tu ${displayDesc}. ¡Creo que yo lo encontré! ¿Dónde nos vemos?`;
-        const phoneClean = String(report.phone).replace(/\D/g, '');
-        const url = `https://wa.me/${phoneClean}?text=${encodeURIComponent(text)}`;
-        window.open(url, '_blank');
-      };
-    }
-
-    this.loadComments(report.id);
-
-    const formComment = $('form-comment');
-    formComment.onsubmit = async (e) => {
-      e.preventDefault();
-      const input = formComment.elements['comment_text'];
-      const text = input.value.trim();
-      if (!text) return;
-
-      const tempComment = {
-        user_name: user?.given_name || user?.name || 'Yo',
-        text,
-        timestamp: Math.floor(Date.now() / 1000)
-      };
-      this.renderComment(tempComment, true);
-      input.value = '';
-
-      try {
-        await this.api.post(
-          CONFIG.ENDPOINTS.COMENTAR_POST,
-          {
-            report_id: report.id,
-            user_name: user?.given_name || user?.name || 'Usuario LostNet',
-            text
-          },
-          true
-        );
-      } catch (err) {
-        console.error(err);
-        showToast('Error de conexión al comentar.', 'error');
-      }
-    };
-  },
-
-  async loadComments(reportId) {
-    const list = $('comments-list');
-    if (!list) return;
-
-    try {
-      const comments = await this.api.get(CONFIG.ENDPOINTS.COMENTARIOS_GET, {
-        report_id: reportId
-      });
-      list.innerHTML = '';
-      if (!comments || comments.length === 0) {
-        list.innerHTML =
-          '<div class="flex flex-col items-center justify-center h-full text-gray-400 opacity-50"><span class="text-3xl mb-2">💭</span><p class="text-xs">Sé el primero en comentar。</p></div>';
-      } else {
-        comments.forEach((c) => this.renderComment(c));
-      }
-    } catch (e) {
-      console.error(e);
-      list.innerHTML =
-        '<p class="text-center text-xs text-red-400 py-4">Error de red al cargar comentarios.</p>';
-    }
-  },
-
-  renderComment(c, isNew = false) {
-    const list = $('comments-list');
-    if (!list) return;
-    if (list.querySelector('.flex-col')) list.innerHTML = '';
-
-    const div = document.createElement('div');
-    div.className = `bg-white p-3 rounded-lg shadow-sm border border-gray-100 text-sm mb-2 last:mb-0 ${isNew ? 'animate-pulse bg-blue-50 border-blue-100' : ''
-      }`;
-
-    const dateStr = c.timestamp
-      ? new Date(c.timestamp * 1000).toLocaleDateString()
-      : 'Justo ahora';
-
-    div.innerHTML = `
-      <div class="flex justify-between items-center mb-1">
-          <span class="font-bold text-gray-800 text-xs bg-gray-100 px-1.5 py-0.5 rounded">${c.user_name || 'Anónimo'
-      }</span>
-          <span class="text-[10px] text-gray-400">${dateStr}</span>
-      </div>
-      <p class="text-gray-600 leading-snug pl-1">${c.text}</p>
-    `;
-    list.appendChild(div);
-    list.scrollTop = list.scrollHeight;
-  },
-
-  close() {
-    this.modal?.classList.add('hidden');
+// ---------- REPORT DETAILS (existing REST contracts) ----------
+const ViewModal = createReportDetail({
+  getUser: () => SessionManager.getUser(),
+  endpoints: CONFIG.ENDPOINTS,
+  notify: showToast,
+  helpers: {
+    getReportTitle, getReportType, getReportCoordinates, getReportCategory,
+    formatReportDate, getReportDate, getReportImage, getLocationLabel, maskPublicEmail, getWhatsAppLink, icon
   }
-};
+});
 
 // ---------- MAP CONTROLLER ----------
 
@@ -525,7 +340,9 @@ class MapController {
     this.elementId = elementId;
     this.map = null;
     this.markers = L.layerGroup();
-    this.markerMap = {};
+    this.markerMap = Object.create(null);
+    this.markerRecords = new Map();
+    this.markerSyncKeys = null;
     this.userLocation = null;
     this.routingControl = null;
     this.colors = { ...CONFIG.COLORS };
@@ -639,120 +456,91 @@ class MapController {
 
   clear() {
     this.markers.clearLayers();
-    this.markerMap = {};
+    this.markerMap = Object.create(null);
+    this.markerRecords.clear();
+    this.markerSyncKeys = null;
     this.clearRoute();
   }
 
-  openMarkerPopup(id) {
-    const marker = this.markerMap[id];
-    if (marker) marker.openPopup();
+  beginMarkerSync() {
+    this.markerSyncKeys = new Set();
   }
 
-  _generatePopupButtons(id, isOwner, hasLocation) {
-    const btnCarId = `btn-car-${id}`;
-    const btnWalkId = `btn-walk-${id}`;
-    const btnDeleteId = `btn-delete-${id}`;
-    const btnDetailsId = `btn-details-${id}`;
-
-    let html = '<div class="flex flex-col gap-2 mt-2">';
-    html += `<button id="${btnDetailsId}" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1.5 px-2 rounded flex items-center justify-center gap-1">💬 Ver Detalles / Comentar</button>`;
-
-    if (hasLocation) {
-      html += `<div class="flex gap-2">
-               <button id="${btnCarId}" class="flex-1 bg-white border border-gray-300 hover:bg-blue-50 text-blue-700 text-xs font-bold py-1.5 px-1 rounded flex items-center justify-center gap-1" title="Ruta en Auto">🚗</button>
-               <button id="${btnWalkId}" class="flex-1 bg-white border border-gray-300 hover:bg-green-50 text-green-700 text-xs font-bold py-1.5 px-1 rounded flex items-center justify-center gap-1" title="Ruta a Pie">🚶</button>
-               </div>`;
+  endMarkerSync() {
+    if (!this.markerSyncKeys) return;
+    for (const [key, record] of this.markerRecords) {
+      if (this.markerSyncKeys.has(key)) continue;
+      this.markers.removeLayer(record.marker);
+      if (!record.safe && record.id !== null && this.markerMap[String(record.id)] === record.marker)
+        delete this.markerMap[String(record.id)];
+      record.marker.off();
+      this.markerRecords.delete(key);
     }
+    this.markerSyncKeys = null;
+  }
 
-    if (isOwner) {
-      html += `<button id="${btnDeleteId}" class="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold py-1.5 px-2 rounded flex items-center justify-center gap-1">🗑️ Eliminar Reporte</button>`;
-    }
+  getReportMarker(report, { kind = 'report' } = {}) {
+    const namespace = kind === 'safe' ? 'SAFE_POINT:' : 'REPORT:';
+    return this.markerRecords.get(namespace + getReportKey(report))?.marker;
+  }
 
-    html += '</div>';
-    return { html, btnCarId, btnWalkId, btnDeleteId, btnDetailsId };
+  openMarkerPopup(id) {
+    if (id === null || id === undefined) return;
+    this.markerMap[String(id)]?.openPopup();
   }
 
   addMarker(data, type, options = {}) {
-    const { lat, lon } = getCoords(data);
-    if (!lat || !lon || lat === 0 || lon === 0 || lat === '0' || lon === '0')
-      return;
-
-    let color, title, iconClass, iconHtml;
-    const isSafePoint = type === 'SAFE_POINT';
-    const isOwner = options.isOwner;
-
-    if (isSafePoint) {
-      color = this.colors.seguro;
-      title = 'Punto Seguro';
-      iconClass = 'safe-point-marker';
-      iconHtml = `<div style="width:18px;height:18px;background:${color};border-radius:4px;transform:rotate(45deg);border:2px solid white;box-shadow:0 0 5px rgba(0,255,0,0.5);"></div>`;
+    const coordinates = getReportCoordinates(data);
+    if (!coordinates) return;
+    const { lat, lon } = coordinates;
+    const safe = type === 'SAFE_POINT';
+    const key = (safe ? 'SAFE_POINT:' : 'REPORT:') + getReportKey(data);
+    this.markerSyncKeys?.add(key);
+    const color = safe ? this.colors.seguro : options.isOwner ? this.colors.propio : this.colors.ajeno;
+    const shape = document.createElement('div');
+    Object.assign(shape.style, {
+      width: safe ? '18px' : '16px', height: safe ? '18px' : '16px',
+      backgroundColor: color, borderRadius: safe ? '4px' : '50%',
+      border: '2px solid white', boxShadow: '0 1px 6px #16344c40'
+    });
+    if (safe) shape.style.transform = 'rotate(45deg)';
+    const iconClass = safe ? 'safe-point-marker' : 'custom-marker';
+    const iconStamp = String(color) + ':' + iconClass;
+    let record = this.markerRecords.get(key);
+    if (!record) {
+      const marker = L.marker([lat, lon], { icon: L.divIcon({ className: iconClass, html: shape.outerHTML }) });
+      record = { marker, safe, id: data.id ?? null, lat, lon, iconStamp, data, options };
+      this.markerRecords.set(key, record);
+      marker.addTo(this.markers);
+      marker.on('popupopen', () => {
+        this.clearRoute();
+        if (!record.safe) record.options.onSelect?.(record.data);
+      });
     } else {
-      color = isOwner ? this.colors.propio : this.colors.ajeno;
-      title = isOwner ? 'Tu reporte' : 'Objeto Perdido';
-      iconClass = 'custom-marker';
-      iconHtml = `<div style="width:16px;height:16px;background:${color};border-radius:50%;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.5);"></div>`;
+      if (record.lat !== lat || record.lon !== lon) record.marker.setLatLng([lat, lon]);
+      if (record.iconStamp !== iconStamp)
+        record.marker.setIcon(L.divIcon({ className: iconClass, html: shape.outerHTML }));
+      Object.assign(record, { lat, lon, iconStamp, data, options });
     }
-
-    const uniqueId = Math.random().toString(36).substr(2, 9);
-    const imgId = `img-${uniqueId}`;
-    const buttons = this._generatePopupButtons(uniqueId, isOwner, true);
-
-    let categoryBadge = '';
-    if (!isSafePoint && data.category) {
-      const cleanCat = normalizeCategory(data.category);
-      categoryBadge = `<span class="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200 ml-auto">${cleanCat}</span>`;
-    }
-
-    const displayDesc = getReportTitle(data);
-
-    const popupContent = `
-      <div class="min-w-[200px] font-sans">
-        <div class="flex items-center gap-2 mb-1">
-            <h3 class="font-bold text-base" style="color:${color}">${title}</h3>
-            ${categoryBadge}
-        </div>
-        ${isSafePoint
-        ? `<p class="font-semibold text-gray-800 text-sm">${data.nombre}</p><p class="text-xs text-gray-500">${data.horario || ''}</p>`
-        : `<p class="text-sm text-gray-800 mb-2 truncate">${displayDesc.substring(
-          0,
-          40
-        )}...</p>`
-      }
-        ${options.imageUrl
-        ? `<div class="relative group cursor-pointer mb-2"><img id="${imgId}" src="${options.imageUrl}" class="w-full h-24 object-cover rounded border border-gray-100"></div>`
-        : ''
-      }
-        ${buttons.html}
-      </div>`;
-
-    const marker = L.marker([lat, lon], {
-      icon: L.divIcon({ className: iconClass, html: iconHtml })
+    const { marker } = record;
+    const label = safe ? 'Punto seguro: ' + (data.nombre || 'Sin nombre')
+      : getReportType(data).label + (options.isOwner ? ', tu reporte: ' : ': ') + getReportTitle(data);
+    marker.getElement()?.setAttribute('aria-label', label);
+    const popup = createReportPopup(data, {
+      safe, isOwner: Boolean(options.isOwner), imageUrl: options.imageUrl || '',
+      onDetails: () => ViewModal.open(record.data, { kind: safe ? 'safe' : 'report' }),
+      onDelete: () => record.options.onDelete?.(record.data.id),
+      onCar: () => this.drawRouteTo(record.lat, record.lon, 'driving'),
+      onWalk: () => this.drawRouteTo(record.lat, record.lon, 'walking')
     });
-    marker.bindPopup(popupContent);
-    marker.addTo(this.markers);
-    marker.getElement()?.setAttribute('aria-label', title + ': ' + (isSafePoint ? data.nombre : getReportTitle(data)));
-
-    if (data.id) this.markerMap[data.id] = marker;
-
-    marker.on('popupopen', () => {
-      this.clearRoute();
-      const img = $(imgId);
-      if (img) img.onclick = () => ViewModal.open(data);
-      const btnCar = $(buttons.btnCarId);
-      if (btnCar) btnCar.onclick = () => this.drawRouteTo(lat, lon, 'driving');
-      const btnWalk = $(buttons.btnWalkId);
-      if (btnWalk) btnWalk.onclick = () => this.drawRouteTo(lat, lon, 'walking');
-
-      const btnDetails = $(buttons.btnDetailsId);
-      if (btnDetails) btnDetails.onclick = () => ViewModal.open(data);
-
-      const btnDelete = $(buttons.btnDeleteId);
-      if (btnDelete && options.onDelete)
-        btnDelete.onclick = () => options.onDelete(data.id);
-    });
-
+    if (marker.getPopup()) marker.setPopupContent(popup);
+    else marker.bindPopup(popup, { className: 'lostnet-popup', minWidth: 210, maxWidth: 280 });
+    // Report IDs live in their own namespace; a safe point can never replace one.
+    if (!safe && data.id !== null && data.id !== undefined && String(data.id).trim())
+      this.markerMap[String(data.id)] = marker;
     return marker;
   }
+
 }
 
 // ---------- CORE MAIN ----------
@@ -767,7 +555,6 @@ const initApp = async () => {
   const api = new ApiService();
   const mapController = new MapController('map');
   const dashboardUI = initDashboardUI(currentUser);
-  ViewModal.init(api);
 
   const state = {
     allReports: [],
@@ -780,6 +567,20 @@ const initApp = async () => {
 
   let isSelectionMode = false;
   let connectionState = 'loading';
+  let reportsLoading = false;
+  let reportsHaveSnapshot = false;
+  let safePointsHaveSnapshot = false;
+  let reportsLoadError = false;
+  let safePointsLoadError = false;
+  let selectedReportKey = null;
+  let loadGeneration = 0;
+  const ownership = new WeakMap();
+  const sessionKey = (user) => user?.sub || user?.email || null;
+  const ownsReport = (report, user = currentUser) => {
+    const key = sessionKey(user);
+    if (!key) return false;
+    return ownership.has(report) ? ownership.get(report) === key : isReportOwner(report, user);
+  };
 
   const ui = {
     menu: $('sidebar-menu'),
@@ -810,6 +611,52 @@ const initApp = async () => {
     modal: $('report-modal'),
     inputLat: $('input-lat'),
     inputLon: $('input-lon')
+  };
+
+  const setSelectedReport = (report) => {
+    selectedReportKey = getReportKey(report);
+    ui.reportsList?.querySelectorAll('.rpt-card').forEach((card) => {
+      const selected = card.dataset.reportKey === selectedReportKey;
+      card.classList.toggle('is-selected', selected);
+      card.classList.toggle('rpt-card--selected', selected);
+      card.dataset.selected = String(selected);
+      card.querySelector('.rpt-card-open')?.setAttribute('aria-pressed', String(selected));
+    });
+  };
+  const locateReport = (report, _coordinates, { kind = 'report' } = {}) => {
+    const coords = getReportCoordinates(report);
+    if (!coords) { ViewModal.open(report, { kind }); return; }
+    if (kind !== 'safe') setSelectedReport(report);
+    if (window.innerWidth < 768) dashboardUI.collapsePanel();
+    mapController.flyToLocation(coords.lat, coords.lon);
+    mapController.getReportMarker(report, { kind })?.openPopup();
+  };
+  const showListState = (state) => {
+    if (!ui.reportsList) return;
+    if (state === 'loading') {
+      ui.reportsList.innerHTML = Array.from({ length: 3 }, () =>
+        '<div class="rpt-skeleton" aria-hidden="true"><span class="rpt-skeleton-photo"></span><span class="rpt-skeleton-copy"><span class="rpt-skeleton-line"></span><span class="rpt-skeleton-line"></span><span class="rpt-skeleton-line"></span></span></div>').join('');
+      return;
+    }
+    const wrapper = document.createElement('div');
+    wrapper.className = 'rpt-list-state';
+    wrapper.innerHTML = icon(state === 'error' ? 'refresh' : 'search', 28);
+    const title = document.createElement('strong');
+    title.textContent = state === 'error' ? 'No pudimos cargar los reportes' : 'No hay reportes para mostrar';
+    const message = document.createElement('p');
+    message.textContent = state === 'error' ? 'Revisa tu conexión y vuelve a intentarlo.'
+      : state.filterText || state.selectedCategories?.size ? 'Prueba otra búsqueda o cambia los filtros.' : 'Los reportes aparecerán aquí cuando estén disponibles.';
+    // Filter state is kept in app state, not inferred from missing report fields.
+    if (state === 'empty') message.textContent = 'Prueba otra búsqueda o cambia los filtros.';
+    wrapper.append(title, message);
+    if (state === 'error') {
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.textContent = 'Volver a intentar';
+      retry.addEventListener('click', () => loadData());
+      wrapper.append(retry);
+    }
+    ui.reportsList.replaceChildren(wrapper);
   };
 
   // Iniciar mapa
@@ -870,32 +717,46 @@ const initApp = async () => {
 
   // ----- BORRAR REPORTE -----
   const handleDeleteReport = async (reportId) => {
+    const user = SessionManager.getUser();
+    const report = state.allReports.find((item) => String(item.id) === String(reportId));
+    if (!user || !report || !ownsReport(report, user)) {
+      showToast('No tienes permiso para eliminar este reporte.', 'warning');
+      return false;
+    }
     if (
       !confirm(
         '⚠️ ¿Estás seguro de que quieres eliminar este reporte?\n\nEsta acción no se puede deshacer.'
       )
     )
-      return;
+      return false;
     try {
       state.allReports = state.allReports.filter((r) => r.id !== reportId);
       render();
-      const userId = currentUser?.sub || '';
+      const userId = user?.sub || '';
       await api.delete(`${CONFIG.ENDPOINTS.REPORTES}/${reportId}`, {
         user_id: userId
       });
       showToast('Reporte eliminado correctamente.', 'success');
 
       setTimeout(loadData, 1000);
+      return true;
     } catch (error) {
       console.error(error);
       showToast('Error al eliminar el reporte.', 'error');
       loadData();
+      return false;
     }
   };
 
+  ViewModal.init(api, {
+    locate: locateReport,
+    deleteReport: handleDeleteReport,
+    isOwner: ownsReport
+  });
+
   // ----- RENDER LISTA + MARCADORES -----
   const render = () => {
-    mapController.clear();
+    mapController.beginMarkerSync();
 
     const filteredReports = state.allReports.filter((r) => {
       const text = getReportTitle(r).toLowerCase();
@@ -910,7 +771,7 @@ const initApp = async () => {
       let matchDistance = true;
       if (state.filterNearby && mapController.userLocation) {
         const { lat, lon } = getCoords(r);
-        if (lat && lon) {
+        if (lat !== null && lon !== null) {
           const dist = getDistanceInMeters(
             mapController.userLocation.lat,
             mapController.userLocation.lon,
@@ -922,74 +783,49 @@ const initApp = async () => {
       }
 
       let matchMine = true;
-      if (state.filterMine) matchMine = isReportOwner(r, currentUser);
+      if (state.filterMine) matchMine = ownsReport(r, currentUser);
 
       return matchText && matchCategory && matchDistance && matchMine;
     });
 
-    if (ui.reportsList) ui.reportsList.innerHTML = '';
-    if (filteredReports.length === 0 && ui.reportsList) {
-      const message = connectionState === 'offline'
-        ? 'Los reportes no están disponibles. Pulsa Actualizar para volver a intentarlo.'
-        : 'No hay reportes con estos filtros. Prueba otra búsqueda o explora otra categoría.';
-      ui.reportsList.innerHTML = '<p class="list-message">' + message + '</p>';
-    }
+    if (ui.reportsList) ui.reportsList.replaceChildren();
+    if (!reportsHaveSnapshot && reportsLoading) showListState('loading');
+    else if (!filteredReports.length) showListState(reportsLoadError ? 'error' : 'empty');
 
-    filteredReports.forEach((r) => {
-      const isOwner = isReportOwner(r, currentUser);
-      const imgUrl = api.resolveUrl(r.photo_url || r.imagen_url);
-      const rCat = normalizeCategory(r.category);
-
-      const marker = mapController.addMarker(r, 'REPORT', {
-        isOwner,
-        imageUrl: imgUrl,
-        onDelete: handleDeleteReport
+    filteredReports.forEach((report) => {
+      const owner = ownsReport(report, currentUser);
+      mapController.addMarker(report, 'REPORT', {
+        isOwner: owner, imageUrl: getReportImage(report, api),
+        onDelete: handleDeleteReport, onSelect: setSelectedReport
       });
-
-      if (ui.reportsList) {
-        const displayTitle = getReportTitle(r);
-        const card = document.createElement('article');
-        card.className = 'report-card';
-        const date = r.timestamp
-          ? new Date(r.timestamp * 1000).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
-          : 'Reporte de la comunidad';
-        card.innerHTML =
-          '<button class="report-card-open" aria-label="Ver en el mapa: ' + escapeHtml(displayTitle) + '">' +
-            '<span class="report-thumbnail">' + (imgUrl
-              ? '<img src="' + escapeHtml(imgUrl) + '" alt="" loading="lazy">'
-              : '<svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m12 3 9 5v9l-9 5-9-5V8l9-5Zm0 10v9M3 8l9 5 9-5M7.5 5.5l9 5"/></svg>') +
-            '</span><span class="report-card-copy">' +
-              '<span class="report-card-title">' + escapeHtml(displayTitle) + '</span>' +
-              '<span class="report-category">' + escapeHtml(rCat) + '</span>' +
-              '<span class="report-date">' + escapeHtml(date) + (isOwner ? ' · Tu reporte' : '') + '</span>' +
-            '</span><span class="report-card-arrow" aria-hidden="true">›</span></button>' +
-          (isOwner ? '<button class="report-delete" title="Eliminar reporte" aria-label="Eliminar reporte: ' + escapeHtml(displayTitle) + '">×</button>' : '');
-        const photo = card.querySelector('img');
-        if (photo) photo.onerror = () => {
-          photo.remove();
-          card.querySelector('.report-thumbnail').textContent = '◇';
-        };
-        card.querySelector('.report-card-open').onclick = () => {
-          if (!marker) return;
-          const { lat, lon } = getCoords(r);
-          if (window.innerWidth < 768) dashboardUI.collapsePanel();
-          mapController.flyToLocation(lat, lon);
-          marker.openPopup();
-        };
-        const deleteButton = card.querySelector('.report-delete');
-        if (deleteButton) deleteButton.onclick = () => handleDeleteReport(r.id);
-        ui.reportsList.appendChild(card);
-      }
+      const coords = getReportCoordinates(report);
+      const distance = coords && mapController.userLocation
+        ? getDistanceInMeters(mapController.userLocation.lat, mapController.userLocation.lon, coords.lat, coords.lon)
+        : undefined;
+      if (ui.reportsList) ui.reportsList.append(createReportCard(report, {
+        api, isOwner: owner, distanceMeters: distance,
+        selected: selectedReportKey === getReportKey(report),
+        onLocate: locateReport,
+        onDetails: (item) => { setSelectedReport(item); ViewModal.open(item); },
+        onDelete: handleDeleteReport
+      }));
     });
 
     state.allSafePoints.forEach((s) =>
       mapController.addMarker(s, 'SAFE_POINT')
     );
 
-    ui.stats.reportes && (ui.stats.reportes.textContent = filteredReports.length);
-    ui.stats.seguros && (ui.stats.seguros.textContent = state.allSafePoints.length);
+    mapController.endMarkerSync();
+    if (ui.stats.reportes) ui.stats.reportes.textContent = reportsHaveSnapshot ? filteredReports.length : '—';
+    if (ui.stats.seguros) ui.stats.seguros.textContent = safePointsHaveSnapshot ? state.allSafePoints.length : '—';
+    const feedback = $('reports-feedback');
+    if (feedback) feedback.textContent = reportsLoading ? 'Actualizando reportes…'
+      : reportsLoadError ? (reportsHaveSnapshot ? 'No pudimos actualizar. Se muestran los últimos datos cargados.' : 'No pudimos obtener los reportes.')
+      : safePointsLoadError ? 'Reportes actualizados. No pudimos actualizar los puntos seguros.'
+      : filteredReports.length ? 'Selecciona un reporte para localizarlo o consultar sus detalles.' : 'Sin resultados con los filtros actuales.';
+    ui.reportsList?.setAttribute('aria-busy', String(reportsLoading));
     if ($('profile-report-count')) $('profile-report-count').textContent =
-      state.allReports.filter((report) => isReportOwner(report, currentUser)).length;
+      state.allReports.filter((report) => ownsReport(report, currentUser)).length;
   };
 
   // -------- BADGE DE NOTIFICACIONES (PUNTO ROJO) --------
@@ -1010,51 +846,61 @@ const initApp = async () => {
 
   // -------- CARGA DE DATOS --------
   const loadData = async () => {
+    const requestGeneration = ++loadGeneration;
     try {
       if (!mapController.map) return;
-      if (ui.status)
-        ui.status.innerHTML = '<span class="status-dot"></span>Actualizando…';
+      if (ui.status) ui.status.innerHTML = '<span class="status-dot"></span>Actualizando…';
       connectionState = 'loading';
+      reportsLoading = true;
       dashboardUI.setConnection('loading');
-      ui.reportsList?.setAttribute('aria-busy', 'true');
       ui.btnRefresh?.setAttribute('aria-busy', 'true');
+      render();
       const results = await api.fetchData(currentUser);
+      if (requestGeneration !== loadGeneration) return;
       const [reportsRes, safesRes, configRes] = results;
-      const hasErrors = results.some((r) => r.status === 'rejected');
-
-      if (configRes.status === 'fulfilled')
-        mapController.setColors(configRes.value?.colores_mapa);
-
-      const rawReports =
-        reportsRes.status === 'fulfilled' ? reportsRes.value : [];
-      state.allReports = Array.isArray(rawReports)
-        ? rawReports.map((r) => ({
-          ...r,
-          security_answer: undefined,
-          email: maskEmail(r.email)
-        }))
-        : [];
-      state.allSafePoints =
-        safesRes.status === 'fulfilled' ? safesRes.value : [];
-
+      reportsLoadError = reportsRes.status !== 'fulfilled' || !Array.isArray(reportsRes.value);
+      safePointsLoadError = safesRes.status !== 'fulfilled' || !Array.isArray(safesRes.value);
+      if (configRes.status === 'fulfilled') mapController.setColors(configRes.value?.colores_mapa);
+      if (!reportsLoadError) {
+        state.allReports = uniqueReports(reportsRes.value).map((rawReport) => {
+          const report = {
+            ...rawReport,
+            security_answer: undefined,
+            email: maskPublicEmail(rawReport.email)
+          };
+          ownership.set(report, isReportOwner(rawReport, currentUser) ? sessionKey(currentUser) : null);
+          return report;
+        });
+        reportsHaveSnapshot = true;
+      }
+      if (!safePointsLoadError) {
+        state.allSafePoints = uniqueReports(safesRes.value);
+        safePointsHaveSnapshot = true;
+      }
+      reportsLoading = false;
+      const hasErrors = reportsLoadError || safePointsLoadError;
       connectionState = hasErrors ? 'offline' : 'online';
       dashboardUI.setConnection(connectionState);
       render();
       refreshNotificationBadge();
-
-      if (ui.status) {
-        ui.status.innerHTML = hasErrors
-          ? '<span class="status-dot"></span>Sin conexión'
-          : '<span class="status-dot"></span>En línea';
-      }
-    } catch (e) {
-      console.error(e);
+      if (ui.status) ui.status.innerHTML = hasErrors
+        ? `<span class="status-dot"></span>${reportsLoadError && safePointsLoadError ? 'Sin conexión' : 'Conexión parcial'}`
+        : '<span class="status-dot"></span>En línea';
+    } catch (error) {
+      if (requestGeneration !== loadGeneration) return;
+      console.error(error);
+      reportsLoading = false;
+      reportsLoadError = true;
       connectionState = 'offline';
       dashboardUI.setConnection('offline');
+      render();
       if (ui.status) ui.status.innerHTML = '<span class="status-dot"></span>Sin conexión';
     } finally {
-      ui.reportsList?.setAttribute('aria-busy', 'false');
-      ui.btnRefresh?.setAttribute('aria-busy', 'false');
+      if (requestGeneration === loadGeneration) {
+        reportsLoading = false;
+        ui.reportsList?.setAttribute('aria-busy', 'false');
+        ui.btnRefresh?.setAttribute('aria-busy', 'false');
+      }
     }
   };
 
