@@ -130,6 +130,15 @@ const resolveReportDate = (report) => parseReportDateValue(report?.timestamp, { 
 export const getReportDate = (report, options = {}) => formatParsedDate(resolveReportDate(report), options);
 
 export const getReportDateISO = (report) => resolveReportDate(report)?.toISOString() || '';
+
+/** Days remaining in the ten-day report retention period; null when creation time is unknown. */
+export const getReportDaysRemaining = (report, now = Date.now()) => {
+  const createdAt = resolveReportDate(report)?.getTime();
+  if (!Number.isFinite(createdAt)) return null;
+  const retentionEndsAt = createdAt + 10 * 24 * 60 * 60 * 1000;
+  return Math.max(0, Math.ceil((retentionEndsAt - now) / (24 * 60 * 60 * 1000)));
+};
+
 export const getLocationLabel = (report) => {
   const coordinates = getReportCoordinates(report);
   return coordinates ? coordinates.lat.toFixed(5) + ', ' + coordinates.lon.toFixed(5) : '';

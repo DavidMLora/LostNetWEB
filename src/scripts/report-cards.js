@@ -1,6 +1,6 @@
 import {
   icon, getReportTitle, getReportType, getReportCoordinates, getReportCategory,
-  getReportDate, getReportDateISO, getReportImage, getReportKey
+  getReportDate, getReportDateISO, getReportDaysRemaining, getReportImage, getReportKey
 } from './reports-utils.js';
 
 const element = (tag, className, text) => {
@@ -91,6 +91,17 @@ export const createReportCard = (report, {
     const date = element('time', 'rpt-card-date', dateLabel);
     date.dateTime = getReportDateISO(report);
     copy.appendChild(date);
+  }
+  const daysRemaining = getReportDaysRemaining(report);
+  if (daysRemaining !== null) {
+    const label = daysRemaining === 0 ? 'Cumplió 10 días de publicación'
+      : daysRemaining === 1 ? 'Queda 1 día de publicación'
+        : `Quedan ${daysRemaining} días de publicación`;
+    const retention = element('span', 'rpt-retention', label);
+    retention.setAttribute('aria-label', daysRemaining === 0 ? label
+      : daysRemaining === 1 ? 'A este reporte le queda 1 día antes de cumplir 10 días'
+        : `A este reporte le quedan ${daysRemaining} días antes de cumplir 10 días`);
+    copy.appendChild(retention);
   }
   const location = element('span', 'rpt-card-location');
   addIcon(location, 'pin', 13);
