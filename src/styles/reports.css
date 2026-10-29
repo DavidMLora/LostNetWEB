@@ -18,6 +18,7 @@
 .rpt-badge--unknown { background: #f0f2f6; color: #788493; }
 .rpt-category { color: #6d7e94; background: #f1f4f8; font-weight: 500; max-width: 100%; overflow-wrap: anywhere; }
 .rpt-card-date { color: #8491a2; font-size: 10px; line-height: 1.4; }
+.rpt-card .rpt-retention { display: inline-flex; align-items: center; padding: 4px 7px; border-radius: 7px; background: #eef5ff; color: #416fa8; font-size: 10px; line-height: 1.4; font-weight: 600; }
 .rpt-card-location { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #7a8ba1; line-height: 1.4; }
 .rpt-card-location-label { overflow-wrap: anywhere; }
 .rpt-card .rpt-card-arrow { color: #91a1b7; align-self: center; font-size: inherit; flex-shrink: 0; }
@@ -88,6 +89,7 @@
 .detail-own { display: inline-flex; align-items: center; gap: 4px; color: #3d76bd; font-size: 10px; }
 .detail-title { font-size: 25px; font-weight: 730; letter-spacing: -.6px; line-height: 1.25; margin: 0; overflow-wrap: anywhere; }
 .detail-date { color: #8d9caf; font-size: 11px; margin-top: -5px; }
+.detail-retention { margin: -5px 0 0; padding: 8px 10px; border-radius: 9px; background: #eef5ff; color: #416fa8; font-size: 11px; font-weight: 600; }
 .detail-info-block { width: 100%; padding: 14px; border-radius: 13px; border: 1px solid #e8edf4; background: #f9fbfd; }
 .detail-info-block h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 7px; color: #536e91; font-size: 11px; font-weight: 650; }
 .detail-info-block p { font-size: 13px; line-height: 1.65; margin: 0; color: #718399; overflow-wrap: anywhere; }
