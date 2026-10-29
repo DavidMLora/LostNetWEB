@@ -9,6 +9,8 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
   const description = byId('report-description');
   const latitude = byId('input-lat');
   const longitude = byId('input-lon');
+  const rewardGroup = byId('report-reward-group');
+  const rewardInput = byId('report-reward');
   const submitButton = byId('btn-submit-report');
   const submitLabel = byId('report-submit-label');
   const submitSpinner = byId('report-submit-spinner');
@@ -33,15 +35,31 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
   const isVisible = () => !modal.classList.contains('hidden');
   form.noValidate = true;
 
+  const checkedValue = (name) => form.querySelector(`input[name="${name}"]:checked`)?.value;
+
+  const updateRewardVisibility = () => {
+    const isLost = checkedValue('status') === 'LOST';
+    if (rewardGroup) rewardGroup.hidden = !isLost;
+    if (!isLost && rewardInput) rewardInput.value = '';
+  };
+
   const setFormError = (message = '') => {
     if (!formError) return;
     formError.textContent = message;
     formError.hidden = !message;
   };
+
   const publicationErrorMessage = (error) => {
     const message = typeof error?.message === 'string' ? error.message.replace(/\s+/g, ' ').trim() : '';
+
+    if (/ia|inteligencia artificial|deepfake|fake|manipulad/i.test(message)) {
+      return 'La imagen subida fue rechazada: parece haber sido generada o alterada digitalmente.';
+    }
+
     const apiStatus = Number(message.match(/^API Error:\s*(\d{3})$/i)?.[1]);
-    if (apiStatus === 400) return 'Revisa los datos del reporte e inténtalo de nuevo.';
+    if (apiStatus === 422 || apiStatus === 400) {
+      return message.replace(/^API Error:\s*\d{3}\s*-?\s*/i, '') || 'Revisa los datos del reporte e inténtalo de nuevo.';
+    }
     if (apiStatus === 429) return 'Has realizado demasiadas solicitudes. Inténtalo más tarde.';
     if (apiStatus === 401) return 'Tu sesión no está autorizada. Inicia sesión de nuevo para publicar.';
     if (apiStatus === 403) return 'No tienes autorización para publicar este reporte. Revisa tu sesión.';
@@ -51,6 +69,7 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
     }
     return message || 'No pudimos confirmar la publicación. Comprueba tus reportes antes de reintentar.';
   };
+
   const setFieldError = (input, errorId, message, validClass = true) => {
     const error = byId(errorId);
     if (error) { error.textContent = message; error.hidden = !message; }
@@ -63,6 +82,7 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
     }
     input.classList.toggle('is-valid', validClass && !message);
   };
+
   const validateDescription = () => {
     if (!description) return true;
     description.setCustomValidity('');
@@ -74,6 +94,7 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
     if (touched.has('description')) setFieldError(description, 'report-description-error', message);
     return !message;
   };
+
   const validatePhoto = () => {
     if (!photoInput) return true;
     photoInput.setCustomValidity('');
@@ -81,13 +102,14 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
     let message = '';
     if (!photo) message = 'Añade una foto del objeto.';
     else if (photo.type && !photo.type.toLowerCase().startsWith('image/')) message = 'Selecciona un archivo de imagen.';
+    else if (/dall[e\-]|midjourney|stablediffusion/i.test(photo.name)) message = 'El archivo parece ser generado por IA. Selecciona una foto real.';
     else if (photoReadFailed) message = 'No pudimos leer esta foto. Selecciónala de nuevo o elige otra.';
     else if (!photoInput.validity.valid) message = photoInput.validationMessage;
     photoInput.setCustomValidity(message);
     if (touched.has('photo')) setFieldError(photoInput, 'report-photo-error', message);
     return !message;
   };
-  const checkedValue = (name) => form.querySelector(`input[name="${name}"]:checked`)?.value;
+
   const validateCategory = () => {
     const radios = [...form.querySelectorAll('input[name="category"]')];
     const message = categories.includes(checkedValue('category')) ? '' : 'Selecciona una categoría para el objeto.';
@@ -101,6 +123,7 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
     if (touched.has('category')) setFieldError(byId('report-category-options'), 'report-category-error', message);
     return !message;
   };
+
   const validateStatus = () => {
     const valid = statuses.includes(checkedValue('status'));
     form.querySelectorAll('input[name="status"]').forEach((radio) => {
@@ -112,10 +135,12 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
     });
     return valid;
   };
+
   const updateCount = () => {
     const count = byId('report-description-count');
     if (count) count.textContent = `${description?.value.length || 0}/30`;
   };
+
   const clearPreview = () => {
     previewGeneration += 1;
     if (activeReader?.readyState === 1) activeReader.abort();
@@ -132,6 +157,7 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
     const previewNote = byId('report-photo-preview-note');
     if (previewNote) { previewNote.textContent = ''; previewNote.hidden = true; }
   };
+
   const readPhoto = () => {
     clearPreview();
     photoReadFailed = false;
@@ -152,7 +178,6 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
         previewImage.onerror = () => {
           if (generation !== previewGeneration || previewImage.getAttribute('src') !== source) return;
           if (previewImage.currentSrc && previewImage.currentSrc !== source) return;
-          // Browser preview decoding does not determine which images the backend accepts.
           const previewNote = byId('report-photo-preview-note');
           if (previewNote) {
             previewNote.textContent = 'No se pudo mostrar la vista previa. La imagen sigue adjunta.';
@@ -183,6 +208,7 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
       validatePhoto();
     }
   };
+
   const resetAnswerVisibility = () => {
     const answer = byId('report-security-answer');
     const toggle = byId('btn-toggle-answer');
@@ -191,6 +217,7 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
     toggle?.setAttribute('aria-label', 'Mostrar respuesta');
     if (toggle) toggle.textContent = 'Mostrar';
   };
+
   const resetDraft = () => {
     form.reset();
     touched.clear();
@@ -213,12 +240,15 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
     setFormError();
     updateCount();
     resetAnswerVisibility();
+    updateRewardVisibility();
   };
+
   const updateViewport = () => {
     if (!isVisible()) return;
     modal.style.setProperty('--report-viewport-height', `${viewport?.height || window.innerHeight}px`);
     modal.style.setProperty('--report-viewport-top', `${viewport?.offsetTop || 0}px`);
   };
+
   const syncViewport = () => {
     if (isVisible()) {
       updateViewport();
@@ -238,11 +268,14 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
       modal.style.removeProperty('--report-viewport-top');
     }
   };
+
   new MutationObserver(syncViewport).observe(modal, { attributes: true, attributeFilter: ['class'] });
+
   const close = () => {
     modal.classList.add('hidden');
     syncViewport();
   };
+
   const open = (lat, lon) => {
     if (completed && !submitting) {
       completed = false;
@@ -258,9 +291,11 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
         ? `${Number(latitude.value).toFixed(5)}, ${Number(longitude.value).toFixed(5)}`
         : 'Ubicación pendiente. Vuelve al mapa para seleccionar un punto.';
     }
+    updateRewardVisibility();
     modal.classList.remove('hidden');
     syncViewport();
   };
+
   const setPending = (pending) => {
     modal.dataset.submitting = String(pending);
     form.setAttribute('aria-busy', String(pending));
@@ -278,6 +313,7 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
       disabledStates = [];
     }
   };
+
   description?.addEventListener('input', () => {
     updateCount();
     if (touched.has('description')) validateDescription();
@@ -296,7 +332,9 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
     touched.add('category'); validateCategory();
   }));
   form.querySelectorAll('input[name="status"]').forEach((radio) => radio.addEventListener('change', () => {
-    touched.add('status'); validateStatus();
+    touched.add('status'); 
+    validateStatus();
+    updateRewardVisibility();
   }));
   byId('btn-toggle-answer')?.addEventListener('click', () => {
     const answer = byId('report-security-answer');
@@ -315,6 +353,7 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
     close();
     onChangeLocation?.();
   });
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (submitting) return;
@@ -374,13 +413,10 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
       setPending(false);
     }
   });
+
   updateCount();
   resetAnswerVisibility();
+  updateRewardVisibility();
   syncViewport();
   return { open, close, isSubmitting: () => submitting };
 };
-
-
-
-
-

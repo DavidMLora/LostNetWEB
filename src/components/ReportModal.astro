@@ -65,6 +65,17 @@ const categories = [
           <p id="report-category-error" class="report-field-error" aria-live="polite"></p>
         </fieldset>
 
+        <div class="report-field" id="report-reward-group">
+          <div class="report-label-row">
+            <label class="report-field-label" for="report-reward">Recompensa ofrecida <span class="report-optional">(opcional)</span></label>
+          </div>
+          <div style="position: relative; display: flex; align-items: center;">
+            <span style="position: absolute; left: 12px; color: var(--color-text-muted, #888); font-weight: 600;">$</span>
+            <input id="report-reward" class="report-input" type="number" name="reward" min="0" step="1" placeholder="0.00" style="padding-left: 28px;" />
+          </div>
+          <p class="report-field-hint" style="font-size: 0.8rem; color: #888; margin-top: 4px;">Monto en MXN que ofreces a quien recupere tu objeto.</p>
+        </div>
+
         <div class="report-field">
           <label class="report-field-label" for="report-phone">Teléfono de contacto <span class="report-optional">(opcional)</span></label>
           <input id="report-phone" class="report-input" type="tel" name="phone" autocomplete="tel" placeholder="Ej. 449 123 4567" />
