@@ -16,36 +16,75 @@ import '../styles/reports.css';
             <img id="detail-hero-image" alt="Foto del objeto reportado" referrerpolicy="no-referrer" decoding="async" hidden />
             <div id="detail-image-fallback" class="detail-image-fallback"><Icon name="box" size={42} /><span>Foto no disponible</span></div>
           </div>
-          <div class="detail-publisher"><Icon name="user" size={17} /><div><span>Publicado por</span><p id="detail-publisher">Usuario</p></div></div>
+          <!-- Sección de autor con sistema de honor y acceso a perfil -->
+          <div class="detail-publisher">
+            <Icon name="user" size={17} />
+            <div class="detail-publisher-info">
+              <span>Publicado por</span>
+              <div class="detail-publisher-row">
+                <p id="detail-publisher">Usuario</p>
+                <span id="detail-publisher-honor" class="detail-honor-badge" title="Puntos de honor" hidden>
+                  <Icon name="shield" size={13} /> <span id="detail-honor-points">0</span> pts
+                </span>
+              </div>
+              <button id="btn-view-profile" class="detail-profile-link" type="button" hidden>Ver perfil y reputación</button>
+            </div>
+          </div>
         </div>
         <div class="detail-information">
-          <div class="detail-badges"><span id="detail-type" class="detail-type" data-type="unknown">Reporte</span><span id="detail-category" class="detail-category" hidden></span><span id="detail-own" class="detail-own" hidden><Icon name="user" size={12} />Tu reporte</span></div>
+          <div class="detail-badges">
+            <span id="detail-type" class="detail-type" data-type="unknown">Reporte</span>
+            <span id="detail-category" class="detail-category" hidden></span>
+            <span id="detail-reward-badge" class="detail-reward-badge" hidden style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-weight: 700; padding: 2px 8px; border-radius: 999px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px;">
+              Recompensa: $<span id="detail-reward-badge-amount">0</span>
+            </span>
+            <span id="detail-own" class="detail-own" hidden><Icon name="user" size={12} />Tu reporte</span>
+          </div>
+
           <h3 id="detail-title" class="detail-title"></h3>
           <time id="detail-date" class="detail-date" hidden></time>
           <p id="detail-retention" class="detail-retention" hidden></p>
+
+          <!-- Bloque destacado de recompensa -->
+          <section id="detail-reward-section" class="detail-info-block detail-reward" hidden style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; padding: 12px; margin: 12px 0;">
+            <h4 style="color: #10b981; margin: 0 0 4px 0; display: flex; align-items: center; gap: 6px;"><Icon name="box" size={16} />Recompensa ofrecida</h4>
+            <p style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #047857;">$<span id="detail-reward-amount">0.00</span> MXN</p>
+          </section>
+
           <section id="detail-location-section" class="detail-info-block" hidden>
             <h4><Icon name="pin" size={16} />Ubicación</h4>
             <p id="detail-location-text" class="detail-coordinate"></p>
             <button id="btn-detail-map" class="detail-map-button" type="button">Ver en el mapa<Icon name="arrow" size={16} /></button>
           </section>
+
           <section class="detail-info-block detail-contact">
             <h4><Icon name="phone" size={16} />Contacto</h4>
             <p id="detail-contact-note"></p>
             <a id="btn-whatsapp-action" class="detail-whatsapp" target="_blank" rel="noopener noreferrer" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-1 1v-9.5a9 9 0 0 1 18 0Z"/><path d="M7 10h10M7 14h6"/></svg>Contactar por WhatsApp<Icon name="arrow" size={16} /></a>
           </section>
+
           <section id="detail-security-section" class="detail-info-block detail-security" hidden>
             <h4><Icon name="shield" size={17} />Pregunta de seguridad</h4>
             <p id="detail-security-question"></p>
           </section>
-          <button id="btn-detail-delete" class="detail-delete" type="button" hidden>Eliminar reporte</button>
+
+          <!-- Acciones de moderación / propietario -->
+          <div style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;">
+            <button id="btn-detail-delete" class="detail-delete" type="button" hidden>Eliminar reporte</button>
+            <button id="btn-report-fake" type="button" style="background: none; border: 1px solid #dc2626; color: #dc2626; border-radius: 6px; padding: 6px 12px; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+              <Icon name="shield" size={14} />Reportar publicación falsa / IA
+            </button>
+          </div>
         </div>
       </div>
+
       <section class="detail-comments" aria-labelledby="detail-comments-title">
         <div class="detail-comments-heading"><h3 id="detail-comments-title">Comentarios <span id="comments-count">—</span></h3><button id="btn-retry-comments" class="detail-retry" type="button" hidden><Icon name="refresh" size={15} />Reintentar</button></div>
         <p id="comments-feedback" class="detail-comments-feedback" role="status"></p>
         <div id="comments-list" class="detail-comments-list" aria-label="Comentarios del reporte" aria-live="polite"></div>
       </section>
     </div>
+
     <form id="form-comment" class="detail-composer">
       <label for="comment-input">Añadir un comentario</label>
       <div class="detail-comment-input-row"><input id="comment-input" name="comment_text" type="text" placeholder="Escribe información sobre el objeto" autocomplete="off" aria-describedby="comment-error comment-confirmation" required /><button id="btn-send-comment" type="submit"><svg id="comment-send-spinner" class="detail-spinner" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" hidden><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" opacity=".25" /><path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" /></svg><span id="comment-send-label">Enviar</span></button></div>

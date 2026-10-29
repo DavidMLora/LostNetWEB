@@ -52,14 +52,14 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
   const errorMessage = (error) => {
     const message = typeof error?.message === 'string' ? error.message.replace(/\s+/g, ' ').trim() : '';
     const status = Number(message.match(/^API Error:\s*(\d{3})$/i)?.[1]);
-    if (status === 400) return 'No se pudo enviar el comentario. Revisa el texto e inténtalo de nuevo.';
-    if (status === 401 || status === 403) return 'Tu sesión no está autorizada para comentar. Inicia sesión de nuevo.';
+    if (status === 400) return 'No se pudo procesar la solicitud. Revisa los datos e inténtalo de nuevo.';
+    if (status === 401 || status === 403) return 'Tu sesión no está autorizada. Inicia sesión de nuevo.';
     if (status === 429) return 'Has realizado demasiadas solicitudes. Inténtalo más tarde.';
-    if (error?.name === 'AbortError') return 'Se agotó el tiempo de espera. No pudimos confirmar el envío. Revisa la lista antes de reintentar.';
+    if (error?.name === 'AbortError') return 'Se agotó el tiempo de espera. Revisa tu conexión antes de reintentar.';
     if (error?.name === 'TypeError' || /failed to fetch|fetch failed|network\s?error|network request failed|load failed/i.test(message)) {
-      return 'No pudimos confirmar el envío. Revisa tu conexión y la lista antes de reintentar.';
+      return 'No pudimos conectar con el servidor. Revisa tu conexión.';
     }
-    return message || 'No pudimos enviar el comentario. Tu borrador sigue aquí.';
+    return message || 'Ocurrió un error inesperado.';
   };
   const setSending = (view = current) => {
     if (!view || current !== view) return;
@@ -200,6 +200,18 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
     const category = view.safe ? '' : helpers.getReportCategory?.(report) || '';
     text('detail-category', category);
     hide('detail-category', !category);
+
+    // Recompensa
+    const reward = Number(report?.reward ?? report?.recompensa ?? 0);
+    const hasReward = !view.safe && Number.isFinite(reward) && reward > 0;
+    hide('detail-reward-section', !hasReward);
+    hide('detail-reward-badge', !hasReward);
+    if (hasReward) {
+      const formattedReward = reward.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      text('detail-reward-amount', formattedReward);
+      text('detail-reward-badge-amount', reward.toLocaleString('es-MX'));
+    }
+
     text('detail-title', view.safe ? report.nombre || 'Punto seguro' : helpers.getReportTitle?.(report) || 'Sin título');
     const date = view.safe ? '' : typeof helpers.getReportDate === 'function'
       ? helpers.getReportDate(report) || ''
@@ -216,6 +228,19 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
     text('detail-retention', retention);
     hide('detail-retention', !retention);
     text('detail-publisher', view.safe ? 'Punto seguro' : report.email ? helpers.maskPublicEmail?.(report.email) || 'Usuario' : 'Usuario');
+
+    // Sistema de honor y enlace al perfil
+    const honorPoints = Number(report?.user_honor ?? report?.honor_points ?? report?.user?.honor ?? 0);
+    const hasHonor = !view.safe && Number.isFinite(honorPoints) && honorPoints > 0;
+    hide('detail-publisher-honor', !hasHonor);
+    if (hasHonor) text('detail-honor-points', honorPoints);
+    const profileBtn = byId('btn-view-profile');
+    if (profileBtn) profileBtn.hidden = view.safe;
+
+    // Reporte de falsos / IA
+    const reportFakeBtn = byId('btn-report-fake');
+    if (reportFakeBtn) reportFakeBtn.hidden = view.safe || owner || id === null;
+
     const coords = helpers.getReportCoordinates?.(report) || null;
     view.coords = coords;
     hide('detail-location-section', !coords);
@@ -282,6 +307,44 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
     close();
     actions.locate(view.report, view.coords, { kind: view.kind });
   });
+
+  // Modal / Acción para ver perfil y reputación
+  byId('btn-view-profile')?.addEventListener('click', () => {
+    const view = current;
+    if (!view || view.safe) return;
+    if (typeof actions.viewProfile === 'function') {
+      actions.viewProfile(view.report);
+    } else {
+      const author = view.report?.email ? helpers.maskPublicEmail?.(view.report.email) : 'Usuario';
+      const points = Number(view.report?.user_honor ?? view.report?.honor_points ?? 0);
+      safeNotify(`Autor: ${author} | Reputación: ${points} pts de honor`, 'info');
+    }
+  });
+
+  // Acción para denunciar reporte falso o imagen generada por IA
+  byId('btn-report-fake')?.addEventListener('click', async () => {
+    const view = current;
+    if (!view || view.safe || view.id === null) return;
+    const user = getCurrentUser();
+    if (!user) {
+      safeNotify('Debes iniciar sesión para reportar una publicación.', 'error');
+      return;
+    }
+    const reason = window.prompt('Indica el motivo del reporte:\n1. Imagen generada por IA\n2. Objeto falso o broma\n3. Fraude o sospechoso\n\nEscribe el motivo:');
+    if (!reason || !reason.trim()) return;
+
+    try {
+      if (typeof actions.reportFake === 'function') {
+        await actions.reportFake(view.id, reason.trim(), view.report);
+      } else if (api && endpoints.REPORTAR_FALSO_POST) {
+        await api.post(endpoints.REPORTAR_FALSO_POST, { report_id: view.id, reason: reason.trim() }, true);
+      }
+      safeNotify('Publicación reportada. El equipo de moderación revisará el reporte.', 'success');
+    } catch (error) {
+      safeNotify(errorMessage(error) || 'No pudimos enviar el reporte de moderación.', 'error');
+    }
+  });
+
   byId('btn-detail-delete')?.addEventListener('click', async () => {
     const view = current;
     if (!view || view.id === null || !view.key || pendingDeletes.has(view.key) || typeof actions.deleteReport !== 'function') return;
@@ -352,8 +415,3 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
   };
   return controller;
 };
-
-
-
-
-
