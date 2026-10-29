@@ -1,0 +1,55 @@
+---
+import Icon from './Icon.astro';
+import '../styles/reports.css';
+---
+<div id="view-modal" class="detail-modal hidden" role="dialog" aria-modal="true" aria-labelledby="detail-dialog-title">
+  <div class="detail-dialog">
+    <header class="detail-header">
+      <span class="detail-header-mark"><Icon name="box" size={22} /></span>
+      <h2 id="detail-dialog-title">Detalle del reporte</h2>
+      <button id="btn-close-view" class="detail-close" type="button" aria-label="Cerrar detalle del reporte"><Icon name="close" size={21} /></button>
+    </header>
+    <div id="view-modal-content" class="detail-scroll">
+      <div class="detail-main">
+        <div class="detail-media-column">
+          <div class="detail-hero">
+            <img id="detail-hero-image" alt="Foto del objeto reportado" referrerpolicy="no-referrer" decoding="async" hidden />
+            <div id="detail-image-fallback" class="detail-image-fallback"><Icon name="box" size={42} /><span>Foto no disponible</span></div>
+          </div>
+          <div class="detail-publisher"><Icon name="user" size={17} /><div><span>Publicado por</span><p id="detail-publisher">Usuario</p></div></div>
+        </div>
+        <div class="detail-information">
+          <div class="detail-badges"><span id="detail-type" class="detail-type" data-type="unknown">Reporte</span><span id="detail-category" class="detail-category" hidden></span><span id="detail-own" class="detail-own" hidden><Icon name="user" size={12} />Tu reporte</span></div>
+          <h3 id="detail-title" class="detail-title"></h3>
+          <time id="detail-date" class="detail-date" hidden></time>
+          <section id="detail-location-section" class="detail-info-block" hidden>
+            <h4><Icon name="pin" size={16} />Ubicación</h4>
+            <p id="detail-location-text" class="detail-coordinate"></p>
+            <button id="btn-detail-map" class="detail-map-button" type="button">Ver en el mapa<Icon name="arrow" size={16} /></button>
+          </section>
+          <section class="detail-info-block detail-contact">
+            <h4><Icon name="phone" size={16} />Contacto</h4>
+            <p id="detail-contact-note"></p>
+            <a id="btn-whatsapp-action" class="detail-whatsapp" target="_blank" rel="noopener noreferrer" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-1 1v-9.5a9 9 0 0 1 18 0Z"/><path d="M7 10h10M7 14h6"/></svg>Contactar por WhatsApp<Icon name="arrow" size={16} /></a>
+          </section>
+          <section id="detail-security-section" class="detail-info-block detail-security" hidden>
+            <h4><Icon name="shield" size={17} />Pregunta de seguridad</h4>
+            <p id="detail-security-question"></p>
+          </section>
+          <button id="btn-detail-delete" class="detail-delete" type="button" hidden>Eliminar reporte</button>
+        </div>
+      </div>
+      <section class="detail-comments" aria-labelledby="detail-comments-title">
+        <div class="detail-comments-heading"><h3 id="detail-comments-title">Comentarios <span id="comments-count">—</span></h3><button id="btn-retry-comments" class="detail-retry" type="button" hidden><Icon name="refresh" size={15} />Reintentar</button></div>
+        <p id="comments-feedback" class="detail-comments-feedback" role="status"></p>
+        <div id="comments-list" class="detail-comments-list" aria-label="Comentarios del reporte" aria-live="polite"></div>
+      </section>
+    </div>
+    <form id="form-comment" class="detail-composer">
+      <label for="comment-input">Añadir un comentario</label>
+      <div class="detail-comment-input-row"><input id="comment-input" name="comment_text" type="text" placeholder="Escribe información sobre el objeto" autocomplete="off" aria-describedby="comment-error comment-confirmation" required /><button id="btn-send-comment" type="submit"><svg id="comment-send-spinner" class="detail-spinner" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" hidden><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" opacity=".25" /><path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" /></svg><span id="comment-send-label">Enviar</span></button></div>
+      <p id="comment-error" class="detail-comment-error" role="alert" hidden></p>
+      <p id="comment-confirmation" class="detail-comment-confirmation" role="status" aria-live="polite"></p>
+    </form>
+  </div>
+</div>
