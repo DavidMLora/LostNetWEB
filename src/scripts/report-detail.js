@@ -208,6 +208,13 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
     hide('detail-date', !date);
     const owner = isOwner(view);
     hide('detail-own', !owner);
+    const daysRemaining = !view.safe ? helpers.getReportDaysRemaining?.(report) : null;
+    const retention = daysRemaining === null || daysRemaining === undefined ? ''
+      : daysRemaining === 0 ? 'Este reporte cumplió 10 días de publicación.'
+        : daysRemaining === 1 ? 'A este reporte le queda 1 día antes de cumplir 10 días.'
+          : `A este reporte le quedan ${daysRemaining} días antes de cumplir 10 días.`;
+    text('detail-retention', retention);
+    hide('detail-retention', !retention);
     text('detail-publisher', view.safe ? 'Punto seguro' : report.email ? helpers.maskPublicEmail?.(report.email) || 'Usuario' : 'Usuario');
     const coords = helpers.getReportCoordinates?.(report) || null;
     view.coords = coords;

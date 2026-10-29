@@ -12,7 +12,8 @@ import { createReportPopup } from './report-popup.js';
 import {
   escapeHtml, icon, getReportTitle, getReportType, getReportCoordinates,
   getReportCategory, formatReportDate, getReportDate, getReportImage, getLocationLabel,
-  maskPublicEmail, getWhatsAppLink, getReportKey, uniqueReports
+  maskPublicEmail, getWhatsAppLink, getReportKey, getReportDateISO,
+  getReportDaysRemaining, uniqueReports
 } from './reports-utils.js';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine';
@@ -107,6 +108,16 @@ const getCoords = (item) => getReportCoordinates(item) || { lat: null, lon: null
 
 const normalizeCategory = (cat) =>
   CONFIG.VALID_CATEGORIES.includes(cat) ? cat : 'Otros';
+
+const DAILY_REPORT_LIMIT = 5;
+const isCreatedToday = (report, now = new Date()) => {
+  const iso = getReportDateISO(report);
+  if (!iso) return false;
+  const created = new Date(iso);
+  return created.getFullYear() === now.getFullYear()
+    && created.getMonth() === now.getMonth()
+    && created.getDate() === now.getDate();
+};
 
 const isReportOwner = (r, currentUser) => {
   if (!currentUser) return false;
@@ -329,6 +340,7 @@ const ViewModal = createReportDetail({
   notify: showToast,
   helpers: {
     getReportTitle, getReportType, getReportCoordinates, getReportCategory,
+    getReportDaysRemaining,
     formatReportDate, getReportDate, getReportImage, getLocationLabel, maskPublicEmail, getWhatsAppLink, icon
   }
 });
@@ -675,6 +687,13 @@ const initApp = async () => {
   const reportForm = initReportForm({
     getUser: () => SessionManager.getUser(),
     publish: ({ user, fields: rawForm, photo }) => {
+      const createdToday = state.allReports.filter((report) =>
+        ownsReport(report, user) && isCreatedToday(report)
+      ).length;
+      if (createdToday >= DAILY_REPORT_LIMIT) {
+        throw new Error(`Hoy ya alcanzaste el límite de ${DAILY_REPORT_LIMIT} reportes. Puedes publicar de nuevo mañana.`);
+      }
+
       const manualData = new FormData();
       const userId = user.sub || 'anon';
       const userEmail = user.email || '';
