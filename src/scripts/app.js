@@ -3,7 +3,9 @@
  * Versión: FINAL v8.4 (Conectado al Servidor Principal por VPN)
  */
 
+/* global google -- Google Identity Services SDK loaded by the login page. */
 import L from 'leaflet';
+import { API_CONFIG, ApiService, createReportFormData } from './api.js';
 import { initDashboardUI } from './dashboard-ui.js';
 import { initReportForm } from './report-form.js';
 import { createReportDetail } from './report-detail.js';
@@ -27,26 +29,13 @@ L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
 
 const NEARBY_RADIUS_METERS = 2500;
 const CONFIG = {
-  // --- RUTAS DE LA VPN AL SERVIDOR PRINCIPAL ---
-  SERVER_URL: 'https://lostnet-api.tail0e8b19.ts.net',
-  API_BASE_URL: 'https://lostnet-api.tail0e8b19.ts.net/api',
+  ...API_CONFIG,
 
   GOOGLE_CLIENT_ID: '131580325520-73jrf8i9o54nhitc64etc4ppk41qkin4.apps.googleusercontent.com',
   DEFAULT_COORDS: [21.88, -102.29],
   DEFAULT_ZOOM: 13,
   GPS_ZOOM: 16,
-  TIMEOUT_MS: 5000,
   ROUTES: { LOGIN: '/', DASHBOARD: '/dashboard' },
-  ENDPOINTS: {
-    REPORTES: '/reportes',
-    REPORTAR: '/reportar',
-    PUNTOS_SEGUROS: '/puntos-seguros',
-    ALERTAS: '/mis-alertas',
-    CONFIG: '/config',
-    CONTACTO: '/contacto',
-    COMENTARIOS_GET: '/comentarios',
-    COMENTAR_POST: '/comentar'
-  },
   VALID_CATEGORIES: ['Electrónica', 'Ropa', 'Documentos', 'Otros'],
   COLORS: { propio: '#2563EB', ajeno: '#EF4444', seguro: '#10B981' }
 };
@@ -55,12 +44,6 @@ const CONFIG = {
 
 const $ = (id) => document.getElementById(id);
 const $$ = (sel) => document.querySelectorAll(sel);
-
-const maskEmail = (email) => {
-  if (!email || typeof email !== 'string') return 'Usuario';
-  const parts = email.split('@');
-  return parts.length < 2 ? 'Usuario' : `${parts[0].substring(0, 2)}***@${parts[1]}`;
-};
 
 const showToast = (message, type = 'info') => {
   const toast = $('toast');
@@ -235,103 +218,6 @@ const SessionManager = {
     return user;
   }
 };
-
-// ---------- API SERVICE ----------
-
-class ApiService {
-  constructor() {
-    this.baseUrl = CONFIG.API_BASE_URL;
-  }
-
-  async get(endpoint, params = {}) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), CONFIG.TIMEOUT_MS);
-    const url = new URL(`${this.baseUrl}${endpoint}`);
-    url.searchParams.append('_t', Date.now());
-    Object.entries(params).forEach(([k, v]) => {
-      if (v != null) url.searchParams.append(k, v);
-    });
-    try {
-      const res = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      if (!res.ok) throw new Error(`API Error: ${res.status}`);
-      return await res.json();
-    } catch (error) {
-      clearTimeout(timeoutId);
-      throw error;
-    }
-  }
-
-  async post(endpoint, body, isJson = false) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(
-      () => controller.abort(),
-      CONFIG.TIMEOUT_MS * 12
-    );
-    const url = new URL(`${this.baseUrl}${endpoint}`);
-
-    const options = { method: 'POST', body, signal: controller.signal };
-    if (isJson) {
-      options.headers = { 'Content-Type': 'application/json' };
-      options.body = JSON.stringify(body);
-    }
-
-    try {
-      const res = await fetch(url, options);
-      clearTimeout(timeoutId);
-      if (!res.ok) throw new Error(`API Error: ${res.status}`);
-      return await res.json();
-    } catch (error) {
-      clearTimeout(timeoutId);
-      throw error;
-    }
-  }
-
-  async delete(endpoint, params = {}) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), CONFIG.TIMEOUT_MS);
-    const url = new URL(`${this.baseUrl}${endpoint}`);
-    Object.entries(params).forEach(([k, v]) => {
-      if (v != null) url.searchParams.append(k, v);
-    });
-    const options = { method: 'DELETE', signal: controller.signal };
-    try {
-      const res = await fetch(url, options);
-      clearTimeout(timeoutId);
-      if (!res.ok) throw new Error(`API Error: ${res.status}`);
-      return await res.json();
-    } catch (error) {
-      clearTimeout(timeoutId);
-      throw error;
-    }
-  }
-
-  fetchData(currentUser) {
-    const promises = [
-      this.get(CONFIG.ENDPOINTS.REPORTES),
-      this.get(CONFIG.ENDPOINTS.PUNTOS_SEGUROS),
-      this.get(CONFIG.ENDPOINTS.CONFIG).catch(() => null)
-    ];
-    if (currentUser?.email) {
-      promises.push(
-        this.get(CONFIG.ENDPOINTS.ALERTAS, { email: currentUser.email }).catch(
-          () => []
-        )
-      );
-    }
-    return Promise.allSettled(promises);
-  }
-
-  resolveUrl(path) {
-    // Si la ruta ya incluye http, la respeta. Si no, usa el SERVER_URL (no el API_BASE_URL)
-    // para que las fotos carguen correctamente desde http://10.155.13.62:5000/photos/...
-    return path && !path.startsWith('http') ? `${CONFIG.SERVER_URL}${path}` : path;
-  }
-
-  fetchContacto(ownerId) {
-    return this.get(CONFIG.ENDPOINTS.CONTACTO, { user_id: ownerId });
-  }
-}
 
 // ---------- REPORT DETAILS (existing REST contracts) ----------
 const ViewModal = createReportDetail({
@@ -694,27 +580,9 @@ const initApp = async () => {
         throw new Error(`Hoy ya alcanzaste el límite de ${DAILY_REPORT_LIMIT} reportes. Puedes publicar de nuevo mañana.`);
       }
 
-      const manualData = new FormData();
-      const userId = user.sub || 'anon';
-      const userEmail = user.email || '';
-
-      manualData.append('user_id', userId);
-      manualData.append('email', userEmail);
-      manualData.append('description', rawForm.get('description'));
-      manualData.append('category', rawForm.get('category'));
-      manualData.append('phone', rawForm.get('phone'));
-      manualData.append('security_question', rawForm.get('security_question'));
-      manualData.append('security_answer', rawForm.get('security_answer'));
-      manualData.append('latitude', rawForm.get('lat'));
-      manualData.append('longitude', rawForm.get('lon'));
-      manualData.append('status', rawForm.get('status') || 'LOST');
-      manualData.append(
-        'timestamp',
-        Math.floor(Date.now() / 1000).toString()
-      );
-      if (photo) manualData.append('foto', photo);
-
-      return api.post(CONFIG.ENDPOINTS.REPORTAR, manualData);
+      return api.post(CONFIG.ENDPOINTS.REPORTAR, createReportFormData({
+        user, fields: rawForm, photo
+      }));
     },
     onPublished: () => setTimeout(loadData, 2000),
     onChangeLocation: () => {
