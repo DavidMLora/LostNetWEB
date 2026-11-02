@@ -1,0 +1,11 @@
+import { readFile, access } from 'node:fs/promises';
+import assert from 'node:assert/strict';
+for (const path of ['dist/index.html', 'dist/dashboard/index.html', 'dist/favicon.jpg']) await access(path);
+const login = await readFile('dist/index.html', 'utf8');
+const dashboard = await readFile('dist/dashboard/index.html', 'utf8');
+assert.ok(login.includes('handleCredentialResponse'));
+for (const id of ['map', 'reports-list', 'report-modal', 'view-modal', 'form-comment']) assert.ok(dashboard.includes(`id="${id}"`), `Missing dashboard component: ${id}`);
+const assets = [...dashboard.matchAll(/(?:src|href)="(\/_astro\/[^"?#]+)"/g)].map(match => match[1]);
+assert.ok(assets.length > 0, 'No bundled dashboard assets');
+for (const path of assets) await access('dist' + path);
+console.log('Static output valid: login, dashboard, existing form/details/map, favicon and referenced assets.');
