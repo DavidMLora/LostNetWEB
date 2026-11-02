@@ -326,6 +326,7 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
   });
 
   // Acción para denunciar reporte falso o imagen generada por IA
+  // Acción para denunciar reporte falso o imagen generada por IA
   byId('btn-report-fake')?.addEventListener('click', async () => {
     const view = current;
     if (!view || view.safe || view.id === null) return;
@@ -343,16 +344,11 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
       if (typeof actions.reportFake === 'function') {
         await actions.reportFake(view.id, reason.trim(), view.report);
       } else if (api) {
-        // Se conecta directo a la ruta parametrizada del backend: POST /api/reportes/<id>/denunciar
-        const endpointUrl = endpoints.REPORTAR_FALSO_POST 
-          ? (endpoints.REPORTAR_FALSO_POST.includes('{id}') 
-              ? endpoints.REPORTAR_FALSO_POST.replace('{id}', encodeURIComponent(view.id))
-              : `${endpoints.REPORTAR_FALSO_POST.replace(/\/$/, '')}/${encodeURIComponent(view.id)}/denunciar`)
-          : `/api/reportes/${encodeURIComponent(view.id)}/denunciar`;
+        const endpointUrl = `/reportes/${encodeURIComponent(view.id)}/denunciar`;
 
         await api.post(endpointUrl, {
-          reason: reason.trim(),
-          email: user.email || user.user_id || 'anonimo'
+          motivo: reason.trim(),
+          reportado_por: user.email || user.user_id || 'anonimo'
         }, true);
       }
       safeNotify('Publicación reportada. El equipo de moderación revisará el reporte.', 'success');
