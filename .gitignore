@@ -22,3 +22,7 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# local CI evidence, caches and temporary files
+.ci-local/
+coverage/
