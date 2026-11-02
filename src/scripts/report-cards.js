@@ -73,6 +73,18 @@ export const createReportCard = (report, {
   const badges = element('span', 'rpt-card-badges');
   badges.appendChild(element('span', 'rpt-badge rpt-badge--' + type.key, type.label));
   badges.appendChild(element('span', 'rpt-category', getReportCategory(report) || 'Sin categoría'));
+
+  // Badge de Recompensa si existe en el reporte
+  const rewardAmount = Number(report?.reward ?? report?.recompensa ?? 0);
+  if (Number.isFinite(rewardAmount) && rewardAmount > 0) {
+    const rewardBadge = element('span', 'rpt-badge rpt-badge--reward', '$' + rewardAmount.toLocaleString('es-MX'));
+    rewardBadge.setAttribute('title', 'Recompensa ofrecida');
+    rewardBadge.style.background = 'rgba(16, 185, 129, 0.18)';
+    rewardBadge.style.color = '#10b981';
+    rewardBadge.style.fontWeight = '700';
+    badges.appendChild(rewardBadge);
+  }
+
   copy.appendChild(badges);
   const dateLabel = getReportDate(report);
   if (dateLabel) {
@@ -109,6 +121,18 @@ export const createReportCard = (report, {
     own.appendChild(element('span', '', 'Tu reporte'));
     footer.appendChild(own);
   }
+
+  // Medalla de honor del usuario en el pie si viene en la respuesta
+  const authorHonor = Number(report?.user_honor ?? report?.honor_points ?? 0);
+  if (authorHonor > 0) {
+    const honorBadge = element('span', 'rpt-honor');
+    addIcon(honorBadge, 'shield', 12);
+    honorBadge.appendChild(element('span', '', authorHonor + ' pts'));
+    honorBadge.style.fontSize = '0.75rem';
+    honorBadge.style.color = '#6366f1';
+    footer.appendChild(honorBadge);
+  }
+
   const detailsButton = element('button', 'rpt-details', 'Ver detalles');
   detailsButton.type = 'button';
   detailsButton.setAttribute('aria-label', 'Ver detalles: ' + title);
@@ -116,6 +140,7 @@ export const createReportCard = (report, {
     if (typeof onDetails === 'function') onDetails(report);
   });
   footer.appendChild(detailsButton);
+
   if (isOwner && validIdentifier(report?.id)) {
     const deleteButton = element('button', 'report-delete rpt-delete');
     deleteButton.type = 'button';
@@ -130,4 +155,3 @@ export const createReportCard = (report, {
   card.appendChild(footer);
   return card;
 };
-
