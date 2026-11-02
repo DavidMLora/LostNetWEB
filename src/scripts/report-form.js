@@ -102,7 +102,7 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
     let message = '';
     if (!photo) message = 'Añade una foto del objeto.';
     else if (photo.type && !photo.type.toLowerCase().startsWith('image/')) message = 'Selecciona un archivo de imagen.';
-    else if (/dall[e\-]|midjourney|stablediffusion/i.test(photo.name)) message = 'El archivo parece ser generado por IA. Selecciona una foto real.';
+    else if (/dall[e-]|midjourney|stablediffusion/i.test(photo.name)) message = 'El archivo parece ser generado por IA. Selecciona una foto real.';
     else if (photoReadFailed) message = 'No pudimos leer esta foto. Selecciónala de nuevo o elige otra.';
     else if (!photoInput.validity.valid) message = photoInput.validationMessage;
     photoInput.setCustomValidity(message);
