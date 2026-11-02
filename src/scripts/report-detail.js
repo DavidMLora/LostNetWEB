@@ -220,13 +220,17 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
     hide('detail-date', !date);
     const owner = isOwner(view);
     hide('detail-own', !owner);
-    const daysRemaining = !view.safe ? helpers.getReportDaysRemaining?.(report) : null;
-    const retention = daysRemaining === null || daysRemaining === undefined ? ''
-      : daysRemaining === 0 ? 'Este reporte cumplió 10 días de publicación.'
-        : daysRemaining === 1 ? 'A este reporte le queda 1 día antes de cumplir 10 días.'
-          : `A este reporte le quedan ${daysRemaining} días antes de cumplir 10 días.`;
+
+    // Vigencia de 10 días (soporta helpers o campo directo del backend: dias_restantes)
+    const rawDays = helpers.getReportDaysRemaining?.(report) ?? report?.dias_restantes;
+    const daysRemaining = !view.safe && rawDays !== undefined && rawDays !== null ? Number(rawDays) : null;
+    const retention = daysRemaining === null || !Number.isFinite(daysRemaining) ? ''
+      : daysRemaining === 0 ? '⏳ Este reporte cumplió su vigencia de 10 días.'
+        : daysRemaining === 1 ? '⏳ Queda 1 día antes de expirar.'
+          : `⏳ Quedan ${daysRemaining} días de vigencia restantes.`;
     text('detail-retention', retention);
     hide('detail-retention', !retention);
+
     text('detail-publisher', view.safe ? 'Punto seguro' : report.email ? helpers.maskPublicEmail?.(report.email) || 'Usuario' : 'Usuario');
 
     // Sistema de honor y enlace al perfil
@@ -330,14 +334,26 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
       safeNotify('Debes iniciar sesión para reportar una publicación.', 'error');
       return;
     }
-    const reason = window.prompt('Indica el motivo del reporte:\n1. Imagen generada por IA\n2. Objeto falso o broma\n3. Fraude o sospechoso\n\nEscribe el motivo:');
+    const reason = window.prompt(
+      'Indica el motivo del reporte:\n1. Imagen generada por IA\n2. Objeto falso o broma\n3. Fraude o sospechoso\n\nEscribe el motivo:'
+    );
     if (!reason || !reason.trim()) return;
 
     try {
       if (typeof actions.reportFake === 'function') {
         await actions.reportFake(view.id, reason.trim(), view.report);
-      } else if (api && endpoints.REPORTAR_FALSO_POST) {
-        await api.post(endpoints.REPORTAR_FALSO_POST, { report_id: view.id, reason: reason.trim() }, true);
+      } else if (api) {
+        // Se conecta directo a la ruta parametrizada del backend: POST /api/reportes/<id>/denunciar
+        const endpointUrl = endpoints.REPORTAR_FALSO_POST 
+          ? (endpoints.REPORTAR_FALSO_POST.includes('{id}') 
+              ? endpoints.REPORTAR_FALSO_POST.replace('{id}', encodeURIComponent(view.id))
+              : `${endpoints.REPORTAR_FALSO_POST.replace(/\/$/, '')}/${encodeURIComponent(view.id)}/denunciar`)
+          : `/api/reportes/${encodeURIComponent(view.id)}/denunciar`;
+
+        await api.post(endpointUrl, {
+          reason: reason.trim(),
+          email: user.email || user.user_id || 'anonimo'
+        }, true);
       }
       safeNotify('Publicación reportada. El equipo de moderación revisará el reporte.', 'success');
     } catch (error) {
