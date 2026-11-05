@@ -31,7 +31,7 @@ const NEARBY_RADIUS_METERS = 2500;
 const CONFIG = {
   ...API_CONFIG,
 
-  GOOGLE_CLIENT_ID: '131580325520-73jrf8i9o54nhitc64etc4ppk41qkin4.apps.googleusercontent.com',
+  GOOGLE_CLIENT_ID: '770683038158-7c53b3odm77q44vvt6uhqbkvt1au49pl.apps.googleusercontent.com',
   DEFAULT_COORDS: [21.88, -102.29],
   DEFAULT_ZOOM: 13,
   GPS_ZOOM: 16,
