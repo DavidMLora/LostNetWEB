@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icon.astro';
 import ReportModal from '../components/ReportModal.astro';
 import ReportDetail from '../components/ReportDetail.astro';
+import UserProfileModal from '../components/UserProfileModal.astro';
 import '../styles/dashboard.css';
 const categories = [
   { value: 'Documentos', icon: 'document' },
@@ -102,7 +103,7 @@ const categories = [
 
 <!-- Creación de reportes: mantiene el contrato y la ubicación elegida en el mapa. -->
 <ReportModal />
-
+<UserProfileModal />
 <!-- Consulta de reportes y comentarios. -->
 <ReportDetail />
 
