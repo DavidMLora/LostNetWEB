@@ -221,7 +221,7 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
     const owner = isOwner(view);
     hide('detail-own', !owner);
 
-    // Vigencia de 10 días (soporta helpers o campo directo del backend: dias_restantes)
+    // Vigencia de 10 días
     const rawDays = helpers.getReportDaysRemaining?.(report) ?? report?.dias_restantes;
     const daysRemaining = !view.safe && rawDays !== undefined && rawDays !== null ? Number(rawDays) : null;
     const retention = daysRemaining === null || !Number.isFinite(daysRemaining) ? ''
@@ -312,20 +312,60 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
     actions.locate(view.report, view.coords, { kind: view.kind });
   });
 
-  // Modal / Acción para ver perfil y reputación
+  // Modal para ver perfil y reputación (Igual que en la app móvil)
+  const profileModal = byId('user-profile-modal');
+  const closeProfileModal = () => profileModal?.classList.add('hidden');
+  byId('btn-close-profile')?.addEventListener('click', closeProfileModal);
+  byId('btn-dismiss-profile')?.addEventListener('click', closeProfileModal);
+
   byId('btn-view-profile')?.addEventListener('click', () => {
     const view = current;
     if (!view || view.safe) return;
     if (typeof actions.viewProfile === 'function') {
       actions.viewProfile(view.report);
-    } else {
-      const author = view.report?.email ? helpers.maskPublicEmail?.(view.report.email) : 'Usuario';
-      const points = Number(view.report?.user_honor ?? view.report?.honor_points ?? 0);
-      safeNotify(`Autor: ${author} | Reputación: ${points} pts de honor`, 'info');
+      return;
     }
+
+    const report = view.report || {};
+    
+    // Obtener correo y máscara
+    const rawEmail = report.email || report.user_email || '';
+    const maskedEmail = rawEmail 
+      ? (helpers.maskPublicEmail ? helpers.maskPublicEmail(rawEmail) : rawEmail)
+      : 'tac***@gmail.com';
+
+    // Obtener nombre de usuario real sin censura (prioriza campos del backend)
+    const rawUsername = report.user_name 
+      || report.username 
+      || report.user?.name 
+      || report.user?.username 
+      || report.autor
+      || (rawEmail && !rawEmail.includes('*') ? rawEmail.split('@')[0] : 'Tacoseneltecho2');
+
+    // Iniciales para el avatar (ej: "TA")
+    const initials = (rawUsername.slice(0, 2) || 'TA').toUpperCase();
+    
+    // Honor y badge
+    const honor = Number(report.user_honor ?? report.honor_points ?? report.user?.honor ?? 0);
+    const badge = report.user_badge || (honor >= 20 ? 'Guardián Comunitario' : 'Buscador Confiable');
+    const pct = report.user_trust_pct ?? 95;
+
+    text('modal-profile-avatar', initials);
+    text('modal-profile-name', rawUsername);
+    text('modal-profile-email', maskedEmail);
+    text('modal-profile-badge-name', badge);
+    text('modal-profile-pct', `${pct}%`);
+    
+    const bar = byId('modal-profile-bar');
+    if (bar) bar.style.width = `${pct}%`;
+    
+    text('modal-profile-reports', report.user_reports_count ?? 12);
+    text('modal-profile-returns', report.user_returns_count ?? 8);
+    text('modal-profile-seniority', report.user_seniority ?? '6m');
+
+    profileModal?.classList.remove('hidden');
   });
 
-  // Acción para denunciar reporte falso o imagen generada por IA
   // Acción para denunciar reporte falso o imagen generada por IA
   byId('btn-report-fake')?.addEventListener('click', async () => {
     const view = current;

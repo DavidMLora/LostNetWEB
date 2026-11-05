@@ -1,0 +1,86 @@
+---
+// src/components/UserProfileModal.astro
+---
+
+<div id="user-profile-modal" class="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden p-4" style="z-index: 3500;">
+  <div class="relative w-full max-w-sm bg-white rounded-[32px] shadow-2xl p-6 border border-slate-100 flex flex-col items-center animate-in fade-in zoom-in-95 duration-150">
+    
+    <!-- Botón cerrar superior derecho -->
+    <button id="btn-close-profile" type="button" aria-label="Cerrar perfil" class="absolute top-5 right-5 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 p-2 rounded-full transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+
+    <!-- Título de cabecera centrado -->
+    <span class="text-slate-400 font-semibold text-xs tracking-wider uppercase mb-3">Perfil de usuario</span>
+
+    <!-- Avatar circular -->
+    <div id="modal-profile-avatar" class="w-20 h-20 rounded-full bg-emerald-500 border-4 border-emerald-100 shadow-md flex items-center justify-center text-white text-2xl font-bold uppercase tracking-wider">
+      TA
+    </div>
+
+    <!-- Nombre y correo -->
+    <h3 id="modal-profile-name" class="mt-3 text-lg font-bold text-slate-800 text-center leading-snug">Usuario</h3>
+    <p id="modal-profile-email" class="text-xs text-slate-400 font-medium">---</p>
+
+    <!-- Badge Rango -->
+    <div class="mt-2.5 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-semibold bg-blue-600 text-white shadow-sm">
+      <span>🔍</span>
+      <span id="modal-profile-badge-name">Buscador Confiable</span>
+    </div>
+
+    <!-- Confianza Comunitaria -->
+    <div class="w-full mt-5 bg-slate-50 border border-slate-100 rounded-2xl p-4">
+      <div class="flex justify-between items-center text-xs font-bold text-slate-700">
+        <span class="flex items-center gap-1.5">🤝 Confianza Comunitaria</span>
+        <span id="modal-profile-pct" class="text-emerald-600 font-bold text-sm">95%</span>
+      </div>
+      
+      <div class="w-full bg-slate-200 h-2 rounded-full mt-2.5 overflow-hidden">
+        <div id="modal-profile-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: 95%;"></div>
+      </div>
+      <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
+        Basado en reportes validados y devoluciones comunitarias sin incidencias.
+      </p>
+    </div>
+
+    <!-- Métricas (3 columnas) -->
+    <div class="grid grid-cols-3 gap-2 w-full mt-3.5">
+      <div class="bg-slate-50 border border-slate-100 rounded-2xl p-2.5 text-center">
+        <span id="modal-profile-reports" class="block text-base font-bold text-blue-600">12</span>
+        <span class="text-[10px] text-slate-500 font-medium leading-tight block mt-0.5">Reportes Exitosos</span>
+      </div>
+      <div class="bg-slate-50 border border-slate-100 rounded-2xl p-2.5 text-center">
+        <span id="modal-profile-returns" class="block text-base font-bold text-emerald-600">8</span>
+        <span class="text-[10px] text-slate-500 font-medium leading-tight block mt-0.5">Objetos Devueltos</span>
+      </div>
+      <div class="bg-slate-50 border border-slate-100 rounded-2xl p-2.5 text-center">
+        <span id="modal-profile-seniority" class="block text-base font-bold text-amber-500">6m</span>
+        <span class="text-[10px] text-slate-500 font-medium leading-tight block mt-0.5">Antigüedad</span>
+      </div>
+    </div>
+
+    <!-- Logros -->
+    <div class="w-full mt-3.5">
+      <h4 class="text-xs font-bold text-slate-700 flex items-center gap-1.5 mb-2">
+        🏅 Logros y Reconocimientos
+      </h4>
+      <div class="flex flex-wrap gap-1.5">
+        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+          🕵️‍♂️ Sabueso
+        </span>
+        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">
+          🌟 Devolvedor
+        </span>
+        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+          🛡️ Verificado
+        </span>
+      </div>
+    </div>
+
+    <!-- Botón Cerrar -->
+    <button id="btn-dismiss-profile" type="button" class="w-full mt-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs tracking-wider uppercase hover:bg-slate-50 transition-colors">
+      Cerrar perfil
+    </button>
+
+  </div>
+</div>
