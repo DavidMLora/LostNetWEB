@@ -17,6 +17,17 @@ import '../styles/reports.css';
             <div id="detail-image-fallback" class="detail-image-fallback"><Icon name="box" size={42} /><span>Foto no disponible</span></div>
           </div>
           <div class="detail-publisher"><Icon name="user" size={17} /><div><span>Publicado por</span><p id="detail-publisher">Usuario</p></div></div>
+          <button id="btn-detail-profile" class="detail-profile-open" type="button" aria-expanded="false" aria-controls="detail-profile"><Icon name="user" size={16} />Ver perfil de esta persona<Icon name="arrow" size={15} /></button>
+          <section id="detail-profile" class="detail-profile" aria-labelledby="detail-profile-name" hidden>
+            <div class="detail-profile-heading"><span id="detail-profile-avatar" class="detail-profile-avatar" aria-hidden="true">U</span><div><span>Perfil público</span><h3 id="detail-profile-name">Usuario</h3></div></div>
+            <p id="detail-profile-context" class="detail-profile-context"></p>
+            <div class="detail-profile-stats" aria-label="Actividad en reportes">
+              <div><strong id="detail-profile-total">—</strong><span>Reportes</span></div>
+              <div><strong id="detail-profile-found">—</strong><span>Encontrados</span></div>
+              <div><strong id="detail-profile-lost">—</strong><span>Perdidos</span></div>
+            </div>
+            <p id="detail-profile-rewards" class="detail-profile-rewards">Reconocimientos y recompensas: no hay datos disponibles.</p>
+          </section>
         </div>
         <div class="detail-information">
           <div class="detail-badges"><span id="detail-type" class="detail-type" data-type="unknown">Reporte</span><span id="detail-category" class="detail-category" hidden></span><span id="detail-own" class="detail-own" hidden><Icon name="user" size={12} />Tu reporte</span></div>

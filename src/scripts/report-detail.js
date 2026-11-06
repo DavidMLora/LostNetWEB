@@ -216,6 +216,31 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
     text('detail-retention', retention);
     hide('detail-retention', !retention);
     text('detail-publisher', view.safe ? 'Punto seguro' : report.email ? helpers.maskPublicEmail?.(report.email) || 'Usuario' : 'Usuario');
+    const profileButton = byId('btn-detail-profile');
+    const profile = byId('detail-profile');
+    if (profile) profile.hidden = true;
+    if (profileButton) {
+      profileButton.hidden = view.safe;
+      profileButton.setAttribute('aria-expanded', 'false');
+    }
+    if (!view.safe) {
+      const profileName = [report.user_name, report.nombre_usuario, report.name]
+        .find((value) => typeof value === 'string' && value.trim())?.trim()
+        || (typeof report.email === 'string' && report.email.trim() ? report.email.trim() : 'Usuario LostNet');
+      text('detail-profile-name', profileName);
+      text('detail-profile-avatar', Array.from(profileName.trim())[0]?.toLocaleUpperCase('es') || 'U');
+      const context = report.status === 'FOUND'
+        ? 'Esta persona reportó un objeto encontrado y puede ayudar a quien lo perdió.'
+        : report.status === 'LOST'
+          ? 'Esta persona busca recuperar un objeto. Puedes ayudarle si tienes información.'
+          : 'Consulta el reporte para conocer cómo puedes ayudar a esta persona.';
+      text('detail-profile-context', context);
+      let summary = null;
+      try { summary = actions.getProfileSummary?.(report) || null; } catch { summary = null; }
+      text('detail-profile-total', summary?.total ?? '—');
+      text('detail-profile-found', summary?.found ?? '—');
+      text('detail-profile-lost', summary?.lost ?? '—');
+    }
     const coords = helpers.getReportCoordinates?.(report) || null;
     view.coords = coords;
     hide('detail-location-section', !coords);
@@ -275,6 +300,13 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
     if (id !== null && !view.safe) void loadComments(view);
   };
   byId('btn-close-view')?.addEventListener('click', close);
+  byId('btn-detail-profile')?.addEventListener('click', (event) => {
+    if (!current || current.safe) return;
+    const profile = byId('detail-profile');
+    if (!profile) return;
+    profile.hidden = !profile.hidden;
+    event.currentTarget.setAttribute('aria-expanded', String(!profile.hidden));
+  });
   byId('btn-retry-comments')?.addEventListener('click', () => { if (current) void loadComments(current); });
   byId('btn-detail-map')?.addEventListener('click', () => {
     const view = current;

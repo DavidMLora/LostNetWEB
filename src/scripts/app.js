@@ -770,7 +770,20 @@ const initApp = async () => {
   ViewModal.init(api, {
     locate: locateReport,
     deleteReport: handleDeleteReport,
-    isOwner: ownsReport
+    isOwner: ownsReport,
+    getProfileSummary: (report) => {
+      const reportUserId = String(report?.user_id || '').trim();
+      const matchingReports = state.allReports.filter((item) => {
+        const itemUserId = String(item?.user_id || '').trim();
+        return reportUserId && reportUserId !== 'anon' && itemUserId === reportUserId;
+      });
+      const profileReports = matchingReports.length ? matchingReports : [report];
+      return {
+        total: profileReports.length,
+        found: profileReports.filter((item) => item?.status === 'FOUND').length,
+        lost: profileReports.filter((item) => item?.status === 'LOST').length
+      };
+    }
   });
 
   // ----- RENDER LISTA + MARCADORES -----
