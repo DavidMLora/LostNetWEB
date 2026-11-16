@@ -732,6 +732,7 @@ const initApp = async () => {
   };
 
   // -------- CARGA DE DATOS --------
+  // -------- CARGA DE DATOS --------
   const loadData = async () => {
     const requestGeneration = ++loadGeneration;
     try {
@@ -752,6 +753,7 @@ const initApp = async () => {
         state.allReports = uniqueReports(reportsRes.value).map((rawReport) => {
           const report = {
             ...rawReport,
+            raw_email: rawReport.email,
             security_answer: undefined,
             email: maskPublicEmail(rawReport.email)
           };

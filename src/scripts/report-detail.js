@@ -312,13 +312,106 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
     actions.locate(view.report, view.coords, { kind: view.kind });
   });
 
-  // Modal para ver perfil y reputación (Igual que en la app móvil)
+  // Modal para ver perfil y reputación (Emparejado con móvil: GET /usuario/perfil-publico)
   const profileModal = byId('user-profile-modal');
-  const closeProfileModal = () => profileModal?.classList.add('hidden');
+  let profileRequestGen = 0;
+
+  const closeProfileModal = () => {
+    profileRequestGen += 1;
+    profileModal?.classList.add('hidden');
+  };
   byId('btn-close-profile')?.addEventListener('click', closeProfileModal);
   byId('btn-dismiss-profile')?.addEventListener('click', closeProfileModal);
 
-  byId('btn-view-profile')?.addEventListener('click', () => {
+  const formatSeniorityDays = (dias) => {
+    if (dias == null || !Number.isFinite(Number(dias)) || Number(dias) < 0) return '—';
+    const d = Math.floor(Number(dias));
+    if (d === 0) return 'Hoy';
+    if (d < 30) return `${d}d`;
+    if (d < 365) return `${Math.floor(d / 30)}m`;
+    const anios = Math.floor(d / 365);
+    return `${anios} ${anios === 1 ? 'año' : 'años'}`;
+  };
+
+  const getHonorRoleStyle = (rol) => {
+    const normalized = String(rol || 'BUSCADOR').toUpperCase();
+    if (normalized === 'SABUESO') {
+      return {
+        label: '🕵️‍♂️ Sabueso Comunitario (Héroe Local)',
+        bg: '#059669' // emerald-600
+      };
+    }
+    if (normalized === 'PERDEDOR') {
+      return {
+        label: '🤦‍♂️ En búsqueda activa (Novato)',
+        bg: '#d97706' // amber-600
+      };
+    }
+    return {
+      label: '🔍 Buscador Confiable',
+      bg: '#2563eb' // blue-600
+    };
+  };
+
+  const setProfileAchievements = (logros) => {
+    const list = Array.isArray(logros) ? logros.map((l) => String(l).toUpperCase()) : [];
+    const toggle = (id, key) => {
+      const el = byId(id);
+      if (el) el.style.opacity = list.includes(key) ? '1' : '0.3';
+    };
+    toggle('modal-badge-sabueso', 'SABUESO');
+    toggle('modal-badge-devolvedor', 'DEVOLVEDOR');
+    toggle('modal-badge-verificado', 'VERIFICADO');
+  };
+
+  const setProfileLoading = () => {
+    const badgeEl = byId('modal-profile-badge');
+    if (badgeEl) badgeEl.style.backgroundColor = '#2563eb';
+    text('modal-profile-badge-name', 'Calculando honor…');
+    text('modal-profile-pct', '…');
+    const bar = byId('modal-profile-bar');
+    if (bar) bar.style.width = '0%';
+    text('modal-profile-reports', '…');
+    text('modal-profile-returns', '…');
+    text('modal-profile-seniority', '…');
+    setProfileAchievements(null);
+  };
+
+  const setProfileEmpty = () => {
+    const style = getHonorRoleStyle('BUSCADOR');
+    const badgeEl = byId('modal-profile-badge');
+    if (badgeEl) badgeEl.style.backgroundColor = style.bg;
+    text('modal-profile-badge-name', style.label);
+    text('modal-profile-pct', '—');
+    const bar = byId('modal-profile-bar');
+    if (bar) bar.style.width = '0%';
+    text('modal-profile-reports', '—');
+    text('modal-profile-returns', '—');
+    text('modal-profile-seniority', '—');
+    setProfileAchievements(null);
+  };
+
+  const applyProfileData = (perfil) => {
+    const style = getHonorRoleStyle(perfil?.rol);
+    const badgeEl = byId('modal-profile-badge');
+    if (badgeEl) badgeEl.style.backgroundColor = style.bg;
+    text('modal-profile-badge-name', style.label);
+
+    const rawConfianza = Number(perfil?.confianza);
+    const confianza = Number.isFinite(rawConfianza) ? Math.min(100, Math.max(0, Math.round(rawConfianza))) : 0;
+    text('modal-profile-pct', `${confianza}%`);
+    const bar = byId('modal-profile-bar');
+    if (bar) bar.style.width = `${confianza}%`;
+
+    const publicados = Math.max(0, Number(perfil?.reportes_publicados) || 0);
+    const encontrados = Math.max(0, Number(perfil?.objetos_encontrados) || 0);
+    text('modal-profile-reports', publicados);
+    text('modal-profile-returns', encontrados);
+    text('modal-profile-seniority', formatSeniorityDays(perfil?.dias_en_lostnet));
+    setProfileAchievements(perfil?.logros);
+  };
+
+  byId('btn-view-profile')?.addEventListener('click', async () => {
     const view = current;
     if (!view || view.safe) return;
     if (typeof actions.viewProfile === 'function') {
@@ -327,43 +420,47 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
     }
 
     const report = view.report || {};
-    
-    // Obtener correo y máscara
-    const rawEmail = report.email || report.user_email || '';
-    const maskedEmail = rawEmail 
-      ? (helpers.maskPublicEmail ? helpers.maskPublicEmail(rawEmail) : rawEmail)
-      : 'tac***@gmail.com';
+    const rawEmail = String(report.raw_email || report.email || report.user_email || '').trim();
+    const maskedEmail = report.email && String(report.email).includes('*')
+      ? String(report.email).trim()
+      : rawEmail
+        ? (helpers.maskPublicEmail ? helpers.maskPublicEmail(rawEmail) : rawEmail)
+        : 'Correo oculto';
 
-    // Obtener nombre de usuario real sin censura (prioriza campos del backend)
-    const rawUsername = report.user_name 
-      || report.username 
-      || report.user?.name 
-      || report.user?.username 
+    const rawUsername = report.user_name
+      || report.username
+      || report.user?.name
+      || report.user?.username
       || report.autor
-      || (rawEmail && !rawEmail.includes('*') ? rawEmail.split('@')[0] : 'Tacoseneltecho2');
+      || (rawEmail && !rawEmail.includes('*') ? rawEmail.split('@')[0] : 'Usuario LostNet');
 
-    // Iniciales para el avatar (ej: "TA")
-    const initials = (rawUsername.slice(0, 2) || 'TA').toUpperCase();
-    
-    // Honor y badge
-    const honor = Number(report.user_honor ?? report.honor_points ?? report.user?.honor ?? 0);
-    const badge = report.user_badge || (honor >= 20 ? 'Guardián Comunitario' : 'Buscador Confiable');
-    const pct = report.user_trust_pct ?? 95;
+    const initials = (rawUsername.slice(0, 2) || 'US').toUpperCase();
 
     text('modal-profile-avatar', initials);
     text('modal-profile-name', rawUsername);
     text('modal-profile-email', maskedEmail);
-    text('modal-profile-badge-name', badge);
-    text('modal-profile-pct', `${pct}%`);
-    
-    const bar = byId('modal-profile-bar');
-    if (bar) bar.style.width = `${pct}%`;
-    
-    text('modal-profile-reports', report.user_reports_count ?? 12);
-    text('modal-profile-returns', report.user_returns_count ?? 8);
-    text('modal-profile-seniority', report.user_seniority ?? '6m');
 
+    setProfileLoading();
     profileModal?.classList.remove('hidden');
+
+    const reqId = ++profileRequestGen;
+    if (rawEmail && !rawEmail.includes('*') && api) {
+      try {
+        const endpoint = endpoints.PERFIL_PUBLICO_GET || '/usuario/perfil-publico';
+        const perfil = await api.get(endpoint, { email: rawEmail });
+        if (reqId !== profileRequestGen) return;
+        if (perfil && typeof perfil === 'object') {
+          applyProfileData(perfil);
+        } else {
+          setProfileEmpty();
+        }
+      } catch {
+        if (reqId !== profileRequestGen) return;
+        setProfileEmpty();
+      }
+    } else {
+      setProfileEmpty();
+    }
   });
 
   // Acción para denunciar reporte falso o imagen generada por IA
