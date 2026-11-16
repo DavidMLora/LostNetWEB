@@ -15,7 +15,7 @@
 
     <!-- Avatar circular -->
     <div id="modal-profile-avatar" class="w-20 h-20 rounded-full bg-emerald-500 border-4 border-emerald-100 shadow-md flex items-center justify-center text-white text-2xl font-bold uppercase tracking-wider">
-      TA
+      US
     </div>
 
     <!-- Nombre y correo -->
@@ -23,39 +23,38 @@
     <p id="modal-profile-email" class="text-xs text-slate-400 font-medium">---</p>
 
     <!-- Badge Rango -->
-    <div class="mt-2.5 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-semibold bg-blue-600 text-white shadow-sm">
-      <span>🔍</span>
-      <span id="modal-profile-badge-name">Buscador Confiable</span>
+    <div id="modal-profile-badge" class="mt-2.5 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-semibold bg-blue-600 text-white shadow-sm transition-colors">
+      <span id="modal-profile-badge-name">Calculando honor…</span>
     </div>
 
     <!-- Confianza Comunitaria -->
     <div class="w-full mt-5 bg-slate-50 border border-slate-100 rounded-2xl p-4">
       <div class="flex justify-between items-center text-xs font-bold text-slate-700">
         <span class="flex items-center gap-1.5">🤝 Confianza Comunitaria</span>
-        <span id="modal-profile-pct" class="text-emerald-600 font-bold text-sm">95%</span>
+        <span id="modal-profile-pct" class="text-emerald-600 font-bold text-sm">—</span>
       </div>
       
       <div class="w-full bg-slate-200 h-2 rounded-full mt-2.5 overflow-hidden">
-        <div id="modal-profile-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: 95%;"></div>
+        <div id="modal-profile-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: 0%;"></div>
       </div>
       <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
-        Basado en reportes validados y devoluciones comunitarias sin incidencias.
+        Sube con objetos encontrados y baja con denuncias recibidas o reportes en revisión.
       </p>
     </div>
 
     <!-- Métricas (3 columnas) -->
     <div class="grid grid-cols-3 gap-2 w-full mt-3.5">
       <div class="bg-slate-50 border border-slate-100 rounded-2xl p-2.5 text-center">
-        <span id="modal-profile-reports" class="block text-base font-bold text-blue-600">12</span>
-        <span class="text-[10px] text-slate-500 font-medium leading-tight block mt-0.5">Reportes Exitosos</span>
+        <span id="modal-profile-reports" class="block text-base font-bold text-blue-600">—</span>
+        <span class="text-[10px] text-slate-500 font-medium leading-tight block mt-0.5">Reportes<br/>Publicados</span>
       </div>
       <div class="bg-slate-50 border border-slate-100 rounded-2xl p-2.5 text-center">
-        <span id="modal-profile-returns" class="block text-base font-bold text-emerald-600">8</span>
-        <span class="text-[10px] text-slate-500 font-medium leading-tight block mt-0.5">Objetos Devueltos</span>
+        <span id="modal-profile-returns" class="block text-base font-bold text-emerald-600">—</span>
+        <span class="text-[10px] text-slate-500 font-medium leading-tight block mt-0.5">Objetos<br/>Encontrados</span>
       </div>
       <div class="bg-slate-50 border border-slate-100 rounded-2xl p-2.5 text-center">
-        <span id="modal-profile-seniority" class="block text-base font-bold text-amber-500">6m</span>
-        <span class="text-[10px] text-slate-500 font-medium leading-tight block mt-0.5">Antigüedad</span>
+        <span id="modal-profile-seniority" class="block text-base font-bold text-amber-500">—</span>
+        <span class="text-[10px] text-slate-500 font-medium leading-tight block mt-0.5">En<br/>LostNet</span>
       </div>
     </div>
 
@@ -65,13 +64,13 @@
         🏅 Logros y Reconocimientos
       </h4>
       <div class="flex flex-wrap gap-1.5">
-        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+        <span id="modal-badge-sabueso" style="opacity: 0.3;" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200 transition-opacity">
           🕵️‍♂️ Sabueso
         </span>
-        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">
+        <span id="modal-badge-devolvedor" style="opacity: 0.3;" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200 transition-opacity">
           🌟 Devolvedor
         </span>
-        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+        <span id="modal-badge-verificado" style="opacity: 0.3;" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 transition-opacity">
           🛡️ Verificado
         </span>
       </div>
