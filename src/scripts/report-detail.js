@@ -463,8 +463,25 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
     }
   });
 
-  // Acción para denunciar reporte falso o imagen generada por IA
-  byId('btn-report-fake')?.addEventListener('click', async () => {
+  // Acción para denunciar reporte falso o inapropiado (Emparejado con móvil)
+  const fakeModal = byId('report-fake-modal');
+  const fakeSubmitBtn = byId('btn-submit-fake-report');
+
+  const closeFakeModal = () => {
+    fakeModal?.classList.add('hidden');
+    if (fakeSubmitBtn) {
+      fakeSubmitBtn.disabled = false;
+      fakeSubmitBtn.textContent = 'Reportar';
+    }
+  };
+
+  byId('btn-close-fake-modal')?.addEventListener('click', closeFakeModal);
+  byId('btn-cancel-fake-modal')?.addEventListener('click', closeFakeModal);
+  fakeModal?.addEventListener('click', (e) => {
+    if (e.target === fakeModal) closeFakeModal();
+  });
+
+  byId('btn-report-fake')?.addEventListener('click', () => {
     const view = current;
     if (!view || view.safe || view.id === null) return;
     const user = getCurrentUser();
@@ -472,24 +489,40 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
       safeNotify('Debes iniciar sesión para reportar una publicación.', 'error');
       return;
     }
-    const reason = window.prompt(
-      'Indica el motivo del reporte:\n1. Imagen generada por IA\n2. Objeto falso o broma\n3. Fraude o sospechoso\n\nEscribe el motivo:'
-    );
-    if (!reason || !reason.trim()) return;
+    const defaultRadio = fakeModal?.querySelector('input[name="fake_reason"]');
+    if (defaultRadio) defaultRadio.checked = true;
+    fakeModal?.classList.remove('hidden');
+  });
+
+  fakeSubmitBtn?.addEventListener('click', async () => {
+    const view = current;
+    if (!view || view.safe || view.id === null) return;
+    const user = getCurrentUser();
+    if (!user) {
+      safeNotify('Debes iniciar sesión para reportar una publicación.', 'error');
+      return;
+    }
+
+    const reason = fakeModal?.querySelector('input[name="fake_reason"]:checked')?.value || 'Reporte falso';
+
+    fakeSubmitBtn.disabled = true;
+    fakeSubmitBtn.textContent = 'Enviando…';
 
     try {
       if (typeof actions.reportFake === 'function') {
-        await actions.reportFake(view.id, reason.trim(), view.report);
+        await actions.reportFake(view.id, reason, view.report);
       } else if (api) {
         const endpointUrl = `/reportes/${encodeURIComponent(view.id)}/denunciar`;
-
         await api.post(endpointUrl, {
-          motivo: reason.trim(),
+          motivo: reason,
           reportado_por: user.email || user.user_id || 'anonimo'
         }, true);
       }
+      closeFakeModal();
       safeNotify('Publicación reportada. El equipo de moderación revisará el reporte.', 'success');
     } catch (error) {
+      fakeSubmitBtn.disabled = false;
+      fakeSubmitBtn.textContent = 'Reportar';
       safeNotify(errorMessage(error) || 'No pudimos enviar el reporte de moderación.', 'error');
     }
   });
