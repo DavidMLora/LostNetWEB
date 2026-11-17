@@ -557,9 +557,50 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
   }
   if (modal) new MutationObserver(syncVisibility).observe(modal, { attributes: true, attributeFilter: ['class'] });
   syncVisibility();
+
+  const openProfile = (target = {}) => {
+    const rawEmail = String(target.raw_email || target.email || target.user_email || '').trim();
+    const maskedEmail = target.email && String(target.email).includes('*')
+      ? String(target.email).trim()
+      : rawEmail
+        ? (helpers.maskPublicEmail ? helpers.maskPublicEmail(rawEmail) : rawEmail)
+        : 'Correo oculto';
+
+    const rawUsername = target.user_name
+      || target.name
+      || target.username
+      || target.user?.name
+      || target.autor
+      || (rawEmail && !rawEmail.includes('*') ? rawEmail.split('@')[0] : 'Usuario LostNet');
+
+    text('modal-profile-avatar', (rawUsername.slice(0, 2) || 'US').toUpperCase());
+    text('modal-profile-name', rawUsername);
+    text('modal-profile-email', maskedEmail);
+
+    setProfileLoading();
+    profileModal?.classList.remove('hidden');
+
+    const reqId = ++profileRequestGen;
+    if (rawEmail && !rawEmail.includes('*') && api) {
+      const endpoint = endpoints.PERFIL_PUBLICO_GET || '/usuario/perfil-publico';
+      api.get(endpoint, { email: rawEmail })
+        .then((perfil) => {
+          if (reqId !== profileRequestGen) return;
+          if (perfil && typeof perfil === 'object') applyProfileData(perfil);
+          else setProfileEmpty();
+        })
+        .catch(() => {
+          if (reqId === profileRequestGen) setProfileEmpty();
+        });
+    } else {
+      setProfileEmpty();
+    }
+  };
+
   const controller = {
     init(apiService, nextActions = {}) { api = apiService; actions = nextActions; return controller; },
     open,
+    openProfile,
     close
   };
   return controller;

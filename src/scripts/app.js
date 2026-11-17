@@ -943,6 +943,9 @@ const initApp = async () => {
   };
   ui.btnNotificationsSidebar?.addEventListener('click', () => setNotificationsOpen(true));
   $('btn-profile-alerts')?.addEventListener('click', () => setNotificationsOpen(true));
+  $('btn-my-honor')?.addEventListener('click', () => {
+    if (currentUser) ViewModal.openProfile(currentUser);
+  });
   ui.btnCloseNotifications?.addEventListener('click', () => setNotificationsOpen(false));
   $('notifications-backdrop')?.addEventListener('click', () => setNotificationsOpen(false));
 
