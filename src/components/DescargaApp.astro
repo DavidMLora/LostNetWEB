@@ -1,0 +1,90 @@
+---
+import { APP_APK_URL, generateQrSvg } from '../config';
+
+const qrSvg = await generateQrSvg(APP_APK_URL);
+---
+
+<div class="bg-white p-8 sm:p-10 rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-slate-100 max-w-2xl mx-auto">
+  <div class="flex flex-col md:flex-row items-center gap-8 md:gap-10">
+    <!-- Columna izquierda: Información y botón de descarga -->
+    <div class="flex-1 text-center md:text-left">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold mb-3">
+        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-1.0001 0-.5515.4482-1.0001.9993-1.0001.5511 0 .9993.4486.9993 1.0001 0 .5515-.4482 1.0001-.9993 1.0001m-11.046 0c-.5511 0-.9993-.4486-.9993-1.0001 0-.5515.4482-1.0001.9993-1.0001.5511 0 .9993.4486.9993 1.0001 0 .5515-.4482 1.0001-.9993 1.0001m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1523-.5676.416.416 0 00-.5676.1523l-2.0223 3.503C15.5902 8.4126 13.8533 8 12 8s-3.5902.4126-5.1366 1.0504L4.8411 5.4475a.416.416 0 00-.5676-.1523.416.416 0 00-.1523.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.8h24c-.3432-4.1411-2.6889-7.6133-6.1185-9.4786"/>
+        </svg>
+        App Oficial
+      </div>
+
+      <h2 class="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight mb-2">
+        Descarga LostNet para Android
+      </h2>
+      <p class="text-slate-500 text-sm sm:text-base mb-6 leading-relaxed">
+        Recibe alertas de objetos perdidos cerca de ti.
+      </p>
+
+      <div class="flex flex-col sm:flex-row md:flex-col lg:flex-row items-stretch sm:items-center gap-3">
+        <a
+          href={APP_APK_URL}
+          download
+          rel="noopener"
+          class="inline-flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold px-6 py-4 rounded-2xl shadow-lg shadow-blue-500/25 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] text-center"
+        >
+          <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 16l4-5h-3V4h-2v7H8l4 5zm-8 4h16v-2H4v2z"/>
+          </svg>
+          <span>Descargar APK</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Columna derecha: Código QR (oculto en móviles) -->
+    <div class="hidden md:flex flex-col items-center justify-center bg-slate-50 p-5 rounded-2xl border border-slate-100 flex-shrink-0">
+      <div
+        class="bg-white p-3 rounded-xl shadow-sm border border-slate-200/60 inline-flex items-center justify-center [&>svg]:w-[180px] [&>svg]:h-[180px] [&>svg]:block"
+        role="img"
+        aria-label="Código QR para descargar la app Android de LostNet"
+        title="Código QR de descarga"
+        set:html={qrSvg}
+      />
+      <p class="text-xs text-slate-500 mt-3 font-medium text-center">
+        Escanéalo con tu celular
+      </p>
+    </div>
+  </div>
+
+  <!-- Bloque desplegable de instalación -->
+  <details class="group mt-8 border-t border-slate-100 pt-6">
+    <summary class="flex items-center justify-between cursor-pointer font-semibold text-slate-700 hover:text-blue-600 transition-colors list-none">
+      <span class="flex items-center gap-2">
+        <svg class="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        ¿Cómo instalarla?
+      </span>
+      <span class="text-slate-400 group-open:rotate-180 transition-transform duration-200">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </span>
+    </summary>
+
+    <div class="mt-4 text-sm text-slate-600 space-y-3 pl-2">
+      <ol class="space-y-2.5 list-decimal list-inside text-slate-600">
+        <li>
+          <strong class="text-slate-700">Descarga el APK:</strong> Pulsa el botón "Descargar APK" o escanea el código QR desde tu celular.
+        </li>
+        <li>
+          <strong class="text-slate-700">Permite la instalación:</strong> Si Android lo pide, permite "Instalar apps desconocidas" para tu navegador en los ajustes del sistema.
+        </li>
+        <li>
+          <strong class="text-slate-700">Abre el archivo e instala:</strong> Abre la notificación de descarga o busca el archivo en tus Descargas y pulsa "Instalar".
+        </li>
+      </ol>
+      <p class="text-xs text-slate-400 pt-3 border-t border-slate-100">
+        Nota: Requiere Android 10 (API 29) o superior.
+      </p>
+    </div>
+  </details>
+</div>
