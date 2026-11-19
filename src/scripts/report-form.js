@@ -56,9 +56,9 @@ export const initReportForm = ({ getUser, publish, onPublished, onChangeLocation
       return 'La imagen subida fue rechazada: parece haber sido generada o alterada digitalmente.';
     }
 
-    const apiStatus = Number(message.match(/^API Error:\s*(\d{3})$/i)?.[1]);
+    const apiStatus = Number(error?.status) || 0;
     if (apiStatus === 422 || apiStatus === 400) {
-      return message.replace(/^API Error:\s*\d{3}\s*-?\s*/i, '') || 'Revisa los datos del reporte e inténtalo de nuevo.';
+      return message || 'Revisa los datos del reporte e inténtalo de nuevo.';
     }
     if (apiStatus === 429) return 'Has realizado demasiadas solicitudes. Inténtalo más tarde.';
     if (apiStatus === 401) return 'Tu sesión no está autorizada. Inicia sesión de nuevo para publicar.';

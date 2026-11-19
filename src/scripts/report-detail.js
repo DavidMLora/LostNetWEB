@@ -51,9 +51,10 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
   };
   const errorMessage = (error) => {
     const message = typeof error?.message === 'string' ? error.message.replace(/\s+/g, ' ').trim() : '';
-    const status = Number(message.match(/^API Error:\s*(\d{3})$/i)?.[1]);
+    const status = Number(error?.status) || 0;
     if (status === 400) return 'No se pudo procesar la solicitud. Revisa los datos e inténtalo de nuevo.';
     if (status === 401 || status === 403) return 'Tu sesión no está autorizada. Inicia sesión de nuevo.';
+    if (status === 409) return 'Ya denunciaste este reporte';
     if (status === 429) return 'Has realizado demasiadas solicitudes. Inténtalo más tarde.';
     if (error?.name === 'AbortError') return 'Se agotó el tiempo de espera. Revisa tu conexión antes de reintentar.';
     if (error?.name === 'TypeError' || /failed to fetch|fetch failed|network\s?error|network request failed|load failed/i.test(message)) {
@@ -521,9 +522,13 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
       closeFakeModal();
       safeNotify('Publicación reportada. El equipo de moderación revisará el reporte.', 'success');
     } catch (error) {
-      fakeSubmitBtn.disabled = false;
-      fakeSubmitBtn.textContent = 'Reportar';
-      safeNotify(errorMessage(error) || 'No pudimos enviar el reporte de moderación.', 'error');
+      closeFakeModal();
+      const isDuplicate = Number(error?.status) === 409;
+      if (isDuplicate) {
+        safeNotify('Ya denunciaste este reporte', 'warning');
+      } else {
+        safeNotify(errorMessage(error) || 'No pudimos enviar el reporte de moderación.', 'error');
+      }
     }
   });
 
