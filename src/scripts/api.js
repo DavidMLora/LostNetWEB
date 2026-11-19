@@ -58,7 +58,16 @@ export class ApiService {
     try {
       const res = await fetch(url, options);
       clearTimeout(timeoutId);
-      if (!res.ok) throw new Error(`API Error: ${res.status}`);
+      if (!res.ok) {
+        let serverMsg = '';
+        try {
+          const body = await res.json();
+          if (body?.error) serverMsg = body.error;
+        } catch (_) {}
+        const err = new Error(serverMsg || `API Error: ${res.status}`);
+        err.status = res.status;
+        throw err;
+      }
       return await res.json();
     } catch (error) {
       clearTimeout(timeoutId);
@@ -77,7 +86,16 @@ export class ApiService {
     try {
       const res = await fetch(url, options);
       clearTimeout(timeoutId);
-      if (!res.ok) throw new Error(`API Error: ${res.status}`);
+      if (!res.ok) {
+        let serverMsg = '';
+        try {
+          const body = await res.json();
+          if (body?.error) serverMsg = body.error;
+        } catch (_) {}
+        const err = new Error(serverMsg || `API Error: ${res.status}`);
+        err.status = res.status;
+        throw err;
+      }
       return await res.json();
     } catch (error) {
       clearTimeout(timeoutId);

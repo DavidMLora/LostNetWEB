@@ -457,6 +457,7 @@ const initApp = async () => {
   const state = {
     allReports: [],
     allSafePoints: [],
+    allAlerts: [],
     filterText: '',
     selectedCategories: new Set(),
     filterNearby: false,
@@ -718,17 +719,16 @@ const initApp = async () => {
   // -------- BADGE DE NOTIFICACIONES (PUNTO ROJO) --------
   const refreshNotificationBadge = () => {
     if (!ui.badgeNotifications) return;
-    if (!mapController.userLocation) {
-      ui.badgeNotifications.classList.add('hidden');
-      return;
+    const hasAlerts = state.allAlerts.length > 0;
+    let hasNearby = false;
+    if (mapController.userLocation) {
+      hasNearby = getNearbyReports(
+        state.allReports,
+        mapController.userLocation,
+        NEARBY_RADIUS_METERS
+      ).length > 0;
     }
-    const hasNearby = getNearbyReports(
-      state.allReports,
-      mapController.userLocation,
-      NEARBY_RADIUS_METERS
-    ).length > 0;
-
-    ui.badgeNotifications.classList.toggle('hidden', !hasNearby);
+    ui.badgeNotifications.classList.toggle('hidden', !hasNearby && !hasAlerts);
   };
 
   // -------- CARGA DE DATOS --------
@@ -745,10 +745,13 @@ const initApp = async () => {
       render();
       const results = await api.fetchData(currentUser);
       if (requestGeneration !== loadGeneration) return;
-      const [reportsRes, safesRes, configRes] = results;
+      const [reportsRes, safesRes, configRes, alertsRes] = results;
       reportsLoadError = reportsRes.status !== 'fulfilled' || !Array.isArray(reportsRes.value);
       safePointsLoadError = safesRes.status !== 'fulfilled' || !Array.isArray(safesRes.value);
       if (configRes.status === 'fulfilled') mapController.setColors(configRes.value?.colores_mapa);
+      if (alertsRes?.status === 'fulfilled' && Array.isArray(alertsRes.value)) {
+        state.allAlerts = alertsRes.value;
+      }
       if (!reportsLoadError) {
         state.allReports = uniqueReports(reportsRes.value).map((rawReport) => {
           const report = {
@@ -879,49 +882,118 @@ const initApp = async () => {
   });
 
   // ------- PANEL LATERAL DERECHO (NOTIFICACIONES) -------
+
+  /** Choose an icon and CSS modifier for each alert type */
+  const alertMeta = (alert) => {
+    const t = (alert.title || '').toLowerCase();
+    if (t.includes('cerca'))      return { icon: '📍', mod: 'nearby' };
+    if (t.includes('denuncia') || (alert.message || '').includes('denuncia'))
+                                  return { icon: '⚠️', mod: 'flag' };
+    if (t.includes('moderador') || (alert.message || '').includes('moderador'))
+                                  return { icon: '🛡️', mod: 'mod' };
+    return { icon: '🔔', mod: 'generic' };
+  };
+
+  /** Human-friendly relative time (Spanish) from Unix seconds */
+  const timeAgo = (unixSecs) => {
+    const diff = Math.max(0, Math.floor(Date.now() / 1000) - unixSecs);
+    if (diff < 60) return 'Ahora';
+    if (diff < 3600) return `Hace ${Math.floor(diff / 60)} min`;
+    if (diff < 86400) return `Hace ${Math.floor(diff / 3600)} h`;
+    if (diff < 604800) return `Hace ${Math.floor(diff / 86400)} d`;
+    return new Date(unixSecs * 1000).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+  };
+
   const populateNotifications = () => {
     if (!ui.notificationsList) return;
 
-    if (!mapController.userLocation) {
-      ui.notificationsList.innerHTML =
-        '<p class="list-message">Activa «Ubicarme» para ver los reportes de tu zona.</p>';
-      return;
-    }
+    // 1. Build a unified list of notification items
+    const items = [];
 
-    const nearbyReports = getNearbyReports(
-      state.allReports,
-      mapController.userLocation,
-      NEARBY_RADIUS_METERS
-    );
+    // 1a. API alerts (always shown — do not require location)
+    state.allAlerts.forEach((a) => {
+      items.push({
+        type: 'api',
+        title: a.title || 'Notificación',
+        body: a.message || '',
+        ts: Number(a.timestamp) || 0,
+        lat: a.lat_objeto ?? null,
+        lon: a.lon_objeto ?? null,
+        reportId: null,
+        alert: a
+      });
+    });
 
-    if (nearbyReports.length === 0) {
-      ui.notificationsList.innerHTML =
-        '<p class="list-message">No hay reportes a menos de 2.5 km de tu ubicación.</p>';
-      return;
-    }
-
-    ui.notificationsList.innerHTML = '';
-    nearbyReports.forEach((r) => {
-      const { lat, lon } = getCoords(r);
-      const dist = getDistanceInMeters(
-        mapController.userLocation.lat,
-        mapController.userLocation.lon,
-        lat,
-        lon
+    // 1b. Nearby reports (only when location is available)
+    if (mapController.userLocation) {
+      const nearbyReports = getNearbyReports(
+        state.allReports,
+        mapController.userLocation,
+        NEARBY_RADIUS_METERS
       );
-      const item = document.createElement('button');
-      item.className = 'notification-item';
-      item.innerHTML = '<span aria-hidden="true">◇</span><span class="flex-1 min-w-0">' +
-        '<strong class="truncate">' + escapeHtml(getReportTitle(r)) + '</strong>' +
-        '<small>' + Math.round(dist) + ' m de ti</small></span><span aria-hidden="true">›</span>';
-      item.onclick = () => {
+      nearbyReports.forEach((r) => {
+        const { lat, lon } = getCoords(r);
+        const dist = getDistanceInMeters(
+          mapController.userLocation.lat,
+          mapController.userLocation.lon,
+          lat, lon
+        );
+        const ts = Number(r.timestamp) || Math.floor(Date.now() / 1000);
+        items.push({
+          type: 'nearby',
+          title: '¡Objeto perdido cerca!',
+          body: escapeHtml(getReportTitle(r)) + ' — ' + Math.round(dist) + ' m de ti',
+          ts,
+          lat, lon,
+          reportId: r.id,
+          alert: null
+        });
+      });
+    }
+
+    // 2. Empty-state
+    if (items.length === 0) {
+      ui.notificationsList.innerHTML =
+        '<p class="list-message">No tienes notificaciones por ahora.</p>';
+      return;
+    }
+
+    // 3. Sort newest-first
+    items.sort((a, b) => b.ts - a.ts);
+
+    // 4. Render
+    ui.notificationsList.innerHTML = '';
+    items.forEach((n) => {
+      const meta = n.type === 'nearby'
+        ? { icon: '📍', mod: 'nearby' }
+        : alertMeta(n.alert);
+
+      const el = document.createElement('button');
+      el.className = 'notification-item notification-item--' + meta.mod;
+      el.innerHTML =
+        '<span class="notif-icon" aria-hidden="true">' + meta.icon + '</span>' +
+        '<span class="flex-1 min-w-0">' +
+          '<strong class="truncate">' + escapeHtml(n.title) + '</strong>' +
+          '<span class="notif-body">' + escapeHtml(n.body) + '</span>' +
+          '<small>' + timeAgo(n.ts) + '</small>' +
+        '</span>' +
+        '<span aria-hidden="true">›</span>';
+
+      el.onclick = () => {
         setNotificationsOpen(false);
         ui.badgeNotifications?.classList.add('hidden');
         if (window.innerWidth < 768) dashboardUI.collapsePanel();
-        mapController.flyToLocation(lat, lon);
-        setTimeout(() => mapController.openMarkerPopup(r.id), 300);
+        const lat = n.lat;
+        const lon = n.lon;
+        if (lat != null && lon != null) {
+          mapController.flyToLocation(lat, lon);
+          if (n.reportId != null) {
+            setTimeout(() => mapController.openMarkerPopup(n.reportId), 300);
+          }
+        }
       };
-      ui.notificationsList.appendChild(item);
+
+      ui.notificationsList.appendChild(el);
     });
   };
 
