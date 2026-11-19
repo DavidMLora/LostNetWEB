@@ -67,6 +67,7 @@ const categories = [
       </section>
       <section id="panel-you" class="sheet-panel profile-panel" role="tabpanel" aria-labelledby="tab-you" tabindex="0" hidden>
         <div class="profile-identity"><div class="profile-avatar"><span id="profile-initials">Tú</span><img id="profile-photo" alt="" hidden referrerpolicy="no-referrer" /></div><h2 id="profile-name">Tu perfil</h2><p id="profile-email"></p></div>
+        <button id="btn-my-honor" class="profile-row"><Icon name="shield" /><span>Mi honor y reputación</span><Icon name="arrow" size={17} /></button>
         <button id="btn-my-reports" class="profile-row"><Icon name="box" /><span>Mis reportes</span><span id="profile-report-count" class="profile-count">—</span><Icon name="arrow" size={17} /></button>
         <button id="btn-profile-alerts" class="profile-row"><Icon name="bell" /><span>Mis alertas cercanas</span><Icon name="arrow" size={17} /></button>
         <button id="btn-logout" class="profile-row logout-row"><Icon name="logout" /><span>Cerrar sesión</span></button>
@@ -95,15 +96,56 @@ const categories = [
   <div class="map-meta"><div class="map-legend" aria-label="Leyenda del mapa"><span><i class="legend-own"></i>Tus reportes</span><span><i class="legend-other"></i>Otros reportes</span><span><i class="legend-safe"></i>Punto seguro</span></div><div id="status-indicator" class="connection-status" role="status"><span class="status-dot"></span>Conectando…</div></div>
   <div id="notifications-backdrop" class="drawer-backdrop" hidden></div>
   <aside id="notifications-menu" class="notifications-drawer" role="dialog" aria-modal="true" aria-labelledby="notifications-title" hidden inert>
-    <div class="drawer-heading"><span class="drawer-icon"><Icon name="bell" size={22} /></span><div><h2 id="notifications-title">Alertas cercanas</h2><p>En un radio de 2.5 km de tu ubicación</p></div><button id="btn-close-notifications" class="icon-button" aria-label="Cerrar alertas"><Icon name="close" /></button></div>
+    <div class="drawer-heading"><span class="drawer-icon"><Icon name="bell" size={22} /></span><div><h2 id="notifications-title">Notificaciones</h2><p>Alertas, reportes cercanos y más</p></div><button id="btn-close-notifications" class="icon-button" aria-label="Cerrar notificaciones"><Icon name="close" /></button></div>
     <div class="drawer-note"><Icon name="gps" size={18} /><p>Activa tu ubicación para descubrir los reportes de tu zona.</p></div>
-    <div id="notifications-list" class="notifications-list custom-scrollbar"><p class="list-message">Activa «Ubicarme» para ver reportes cercanos.</p></div>
+    <div id="notifications-list" class="notifications-list custom-scrollbar"><p class="list-message">No tienes notificaciones por ahora.</p></div>
   </aside>
 </main>
 
 <!-- Creación de reportes: mantiene el contrato y la ubicación elegida en el mapa. -->
 <ReportModal />
 <UserProfileModal />
+
+<!-- Modal para denunciar publicación (emparejado con app móvil) -->
+<div id="report-fake-modal" class="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden p-4" style="z-index: 3600;" role="dialog" aria-modal="true" aria-labelledby="fake-modal-title">
+  <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100">
+    <div class="flex items-start justify-between gap-3 mb-4">
+      <div>
+        <h3 id="fake-modal-title" class="text-lg font-bold text-slate-900 leading-tight">Reportar como falso o inapropiado</h3>
+        <p class="text-xs text-slate-500 mt-0.5">Selecciona el motivo del reporte</p>
+      </div>
+      <button id="btn-close-fake-modal" type="button" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition" aria-label="Cerrar">✕</button>
+    </div>
+
+    <div id="fake-reason-options" class="space-y-2.5 mb-6">
+      <label class="flex items-center gap-3 p-3.5 rounded-2xl border border-slate-200 hover:border-red-300 hover:bg-red-50/40 cursor-pointer transition has-[:checked]:border-red-500 has-[:checked]:bg-red-50/70">
+        <input type="radio" name="fake_reason" value="Reporte falso" class="accent-red-600 w-4 h-4" checked />
+        <span class="text-sm font-semibold text-slate-800">Reporte falso</span>
+      </label>
+
+      <label class="flex items-center gap-3 p-3.5 rounded-2xl border border-slate-200 hover:border-red-300 hover:bg-red-50/40 cursor-pointer transition has-[:checked]:border-red-500 has-[:checked]:bg-red-50/70">
+        <input type="radio" name="fake_reason" value="Contenido inapropiado" class="accent-red-600 w-4 h-4" />
+        <span class="text-sm font-semibold text-slate-800">Contenido inapropiado</span>
+      </label>
+
+      <label class="flex items-center gap-3 p-3.5 rounded-2xl border border-slate-200 hover:border-red-300 hover:bg-red-50/40 cursor-pointer transition has-[:checked]:border-red-500 has-[:checked]:bg-red-50/70">
+        <input type="radio" name="fake_reason" value="Imagen sospechosa" class="accent-red-600 w-4 h-4" />
+        <span class="text-sm font-semibold text-slate-800">Imagen sospechosa</span>
+      </label>
+
+      <label class="flex items-center gap-3 p-3.5 rounded-2xl border border-slate-200 hover:border-red-300 hover:bg-red-50/40 cursor-pointer transition has-[:checked]:border-red-500 has-[:checked]:bg-red-50/70">
+        <input type="radio" name="fake_reason" value="Información engañosa" class="accent-red-600 w-4 h-4" />
+        <span class="text-sm font-semibold text-slate-800">Información engañosa</span>
+      </label>
+    </div>
+
+    <div class="flex items-center justify-end gap-2.5">
+      <button id="btn-cancel-fake-modal" type="button" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition">Cancelar</button>
+      <button id="btn-submit-fake-report" type="button" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition shadow-sm">Reportar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Consulta de reportes y comentarios. -->
 <ReportDetail />
 
