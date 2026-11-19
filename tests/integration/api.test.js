@@ -96,17 +96,25 @@ describe('HTTP requests and existing REST contracts (MSW)', () => {
   it('propagates HTTP 429 on report publication without retrying or claiming success', async () => {
     let requests = 0;
     server.use(http.post(base + '/reportar', () => { requests++; return HttpResponse.json({ error: 'Cinco diarios o veinte semanales' }, { status: 429 }); }));
-    await expect(api.post('/reportar', new FormData())).rejects.toThrow('API Error: 429');
+    await expect(api.post('/reportar', new FormData())).rejects.toMatchObject({ status: 429, message: 'Cinco diarios o veinte semanales' });
     expect(requests).toBe(1);
   });
   it('propagates a reports HTTP 500', async () => {
     server.use(http.get(base + '/reportes', () => HttpResponse.json({ error: 'Unavailable' }, { status: 500 })));
-    await expect(api.get('/reportes')).rejects.toThrow('API Error: 500');
+    await expect(api.get('/reportes')).rejects.toMatchObject({ status: 500, message: 'Unavailable' });
   });
   it('propagates comment HTTP 500 and deletion HTTP 403', async () => {
     server.use(http.post(base + '/comentar', () => new HttpResponse(null, { status: 500 })), http.delete(base + '/reportes/17', () => new HttpResponse(null, { status: 403 })));
-    await expect(api.post('/comentar', { report_id: 17, user_name: 'Ana', text: 'Texto' }, true)).rejects.toThrow('API Error: 500');
-    await expect(api.delete('/reportes/17')).rejects.toThrow('API Error: 403');
+    await expect(api.post('/comentar', { report_id: 17, user_name: 'Ana', text: 'Texto' }, true)).rejects.toMatchObject({ status: 500, message: 'API Error: 500' });
+    await expect(api.delete('/reportes/17')).rejects.toMatchObject({ status: 403, message: 'API Error: 403' });
+  });
+  it('falls back to "API Error: <status>" when the server returns no JSON body', async () => {
+    server.use(http.get(base + '/reportes', () => new HttpResponse('Internal Server Error', { status: 500, headers: { 'Content-Type': 'text/plain' } })));
+    await expect(api.get('/reportes')).rejects.toMatchObject({ status: 500, message: 'API Error: 500', body: null });
+  });
+  it('falls back to "API Error: <status>" when the JSON body has no error field', async () => {
+    server.use(http.post(base + '/reportar', () => HttpResponse.json({ ok: false }, { status: 500 })));
+    await expect(api.post('/reportar', new FormData())).rejects.toMatchObject({ status: 500, message: 'API Error: 500' });
   });
   it('rejects a network failure', async () => {
     server.use(http.get(base + '/reportes', () => HttpResponse.error()));
@@ -140,7 +148,7 @@ describe('HTTP requests and existing REST contracts (MSW)', () => {
     const result = await api.fetchData({ email: 'ana@example.test' });
     expect(result.map(item => item.status)).toEqual(['fulfilled','rejected','fulfilled','fulfilled']);
     expect(result[0].value).toEqual([{ id: 7 }]);
-    expect(result[1].reason.message).toBe('API Error: 500');
+    expect(result[1].reason).toMatchObject({ status: 500, message: 'API Error: 500' });
   });
   it('does not request alerts for an anonymous aggregate load', async () => {
     server.use(...['/reportes','/puntos-seguros','/config'].map(endpoint => http.get(base + endpoint, () => HttpResponse.json([]))));

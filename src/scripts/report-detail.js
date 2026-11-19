@@ -51,7 +51,7 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
   };
   const errorMessage = (error) => {
     const message = typeof error?.message === 'string' ? error.message.replace(/\s+/g, ' ').trim() : '';
-    const status = Number(message.match(/^API Error:\s*(\d{3})$/i)?.[1]) || Number(error?.status);
+    const status = Number(error?.status) || 0;
     if (status === 400) return 'No se pudo procesar la solicitud. Revisa los datos e inténtalo de nuevo.';
     if (status === 401 || status === 403) return 'Tu sesión no está autorizada. Inicia sesión de nuevo.';
     if (status === 409) return 'Ya denunciaste este reporte';
@@ -523,7 +523,7 @@ export const createReportDetail = ({ getUser, endpoints = {}, notify, helpers = 
       safeNotify('Publicación reportada. El equipo de moderación revisará el reporte.', 'success');
     } catch (error) {
       closeFakeModal();
-      const isDuplicate = Number(error?.status) === 409 || /API Error:\s*409/i.test(error?.message);
+      const isDuplicate = Number(error?.status) === 409;
       if (isDuplicate) {
         safeNotify('Ya denunciaste este reporte', 'warning');
       } else {

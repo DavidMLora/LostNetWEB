@@ -22,6 +22,19 @@ export class ApiService {
     this.timeoutMs = timeoutMs;
   }
 
+  /** Parse error body and build a rich Error with .status and .body */
+  static _buildError(res, body) {
+    const serverMsg = body?.error || body?.message || '';
+    const err = new Error(serverMsg || `API Error: ${res.status}`);
+    err.status = res.status;
+    err.body = body;
+    return err;
+  }
+
+  static async _parseErrorBody(res) {
+    try { return await res.json(); } catch (_) { return null; }
+  }
+
   async get(endpoint, params = {}) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
@@ -33,7 +46,7 @@ export class ApiService {
     try {
       const res = await fetch(url, { signal: controller.signal });
       clearTimeout(timeoutId);
-      if (!res.ok) throw new Error(`API Error: ${res.status}`);
+      if (!res.ok) throw ApiService._buildError(res, await ApiService._parseErrorBody(res));
       return await res.json();
     } catch (error) {
       clearTimeout(timeoutId);
@@ -58,16 +71,7 @@ export class ApiService {
     try {
       const res = await fetch(url, options);
       clearTimeout(timeoutId);
-      if (!res.ok) {
-        let serverMsg = '';
-        try {
-          const body = await res.json();
-          if (body?.error) serverMsg = body.error;
-        } catch (_) {}
-        const err = new Error(serverMsg || `API Error: ${res.status}`);
-        err.status = res.status;
-        throw err;
-      }
+      if (!res.ok) throw ApiService._buildError(res, await ApiService._parseErrorBody(res));
       return await res.json();
     } catch (error) {
       clearTimeout(timeoutId);
@@ -86,16 +90,7 @@ export class ApiService {
     try {
       const res = await fetch(url, options);
       clearTimeout(timeoutId);
-      if (!res.ok) {
-        let serverMsg = '';
-        try {
-          const body = await res.json();
-          if (body?.error) serverMsg = body.error;
-        } catch (_) {}
-        const err = new Error(serverMsg || `API Error: ${res.status}`);
-        err.status = res.status;
-        throw err;
-      }
+      if (!res.ok) throw ApiService._buildError(res, await ApiService._parseErrorBody(res));
       return await res.json();
     } catch (error) {
       clearTimeout(timeoutId);
